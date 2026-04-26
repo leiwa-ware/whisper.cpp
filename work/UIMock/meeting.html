@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会議録音</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { background:#0f172a; color:#e2e8f0; margin:0; min-height:100vh;
+         font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+
+  /* ─── Topbar ─── */
+  .rec-topbar {
+    background:#1a1a2e; padding:0 20px; height:56px;
+    display:flex; align-items:center; gap:16px;
+    position:sticky; top:0; z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,.4);
+    border-bottom:1px solid #2d3748;
+  }
+  .rec-topbar .header-logo { color:#a78bfa; font-weight:700; font-size:16px; }
+  .rec-topbar .page-title  { color:#94a3b8; font-size:13px; font-weight:500; }
+
+  /* ─── Step indicator ─── */
+  .step-bar {
+    display:flex; align-items:center; justify-content:center;
+    padding:16px 20px 12px; gap:0;
+  }
+  .step-item {
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:#475569; font-weight:500; white-space:nowrap;
+  }
+  .step-item.active { color:#a78bfa; }
+  .step-item.done   { color:#34d399; }
+  .step-num {
+    width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700;
+    background:#1e293b; border:2px solid #334155;
+  }
+  .step-item.active .step-num { background:#7c3aed; border-color:#a78bfa; color:#fff; }
+  .step-item.done   .step-num { background:#059669; border-color:#34d399; color:#fff; }
+  .step-line { width:32px; height:2px; background:#1e293b; margin:0 4px; flex-shrink:0; }
+  .step-line.done { background:#34d399; }
+
+  /* ─── Content wrap ─── */
+  .rec-content { max-width:620px; margin:0 auto; padding:0 20px 48px; }
+
+  /* ─── Step panels ─── */
+  .step-panel { display:none; }
+  .step-panel.active { display:block; }
+
+  /* ─── Form card ─── */
+  .form-card {
+    background:#1e293b; border-radius:12px; padding:20px;
+    border:1px solid #2d3748; margin-top:8px;
+  }
+  .form-card h3 {
+    margin:0 0 14px; font-size:11px; color:#64748b;
+    font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  }
+
+  /* type toggle */
+  .type-toggle { display:flex; gap:8px; margin-bottom:20px; }
+  .type-btn {
+    flex:1; padding:12px 8px; border:2px solid #334155;
+    background:#0f172a; border-radius:8px; cursor:pointer;
+    color:#64748b; font-size:13px; font-weight:600;
+    text-align:center; transition:all .2s;
+  }
+  .type-btn .type-icon { font-size:22px; display:block; margin-bottom:4px; }
+  .type-btn.active       { border-color:#7c3aed; background:#1e1b4b; color:#a78bfa; }
+  .type-btn:hover:not(.active) { border-color:#475569; color:#e2e8f0; }
+
+  /* form fields */
+  .form-field { margin-bottom:14px; }
+  .form-label { font-size:11px; color:#64748b; font-weight:700; margin-bottom:6px; display:block; letter-spacing:.3px; }
+  .form-input {
+    width:100%; box-sizing:border-box;
+    background:#0f172a; border:1px solid #334155; border-radius:6px;
+    color:#e2e8f0; font-size:14px; padding:10px 12px;
+    outline:none; transition:border-color .2s;
+  }
+  .form-input:focus { border-color:#7c3aed; }
+  .form-input::placeholder { color:#475569; }
+
+  /* start button */
+  .btn-start {
+    width:100%; padding:16px; margin-top:12px;
+    background:linear-gradient(135deg,#7c3aed,#4f46e5);
+    border:none; border-radius:10px; color:#fff;
+    font-size:15px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:opacity .2s; box-shadow:0 4px 16px rgba(124,58,237,.4);
+  }
+  .btn-start:hover { opacity:.9; }
+
+  /* ─── Recording step ─── */
+  .rec-status-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 0 8px;
+  }
+  .rec-badge {
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; font-weight:700; color:#ef4444; letter-spacing:.4px;
+  }
+  .rec-blink {
+    width:10px; height:10px; border-radius:50%; background:#ef4444;
+    animation:blink 1s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+  .rec-timer {
+    font-size:32px; font-weight:700; letter-spacing:3px;
+    font-variant-numeric:tabular-nums; color:#e2e8f0;
+  }
+
+  /* waveform */
+  .waveform {
+    display:flex; align-items:center; justify-content:center;
+    gap:3px; height:52px; margin:4px 0;
+  }
+  .wbar {
+    width:4px; border-radius:2px; background:#7c3aed;
+    animation:wv .8s ease-in-out infinite;
+  }
+  .wbar:nth-child(even) { background:#a78bfa; }
+  @keyframes wv { 0%,100%{height:4px;opacity:.3} 50%{height:34px;opacity:1} }
+  .wbar:nth-child(1) {animation-delay:.00s} .wbar:nth-child(2) {animation-delay:.10s}
+  .wbar:nth-child(3) {animation-delay:.20s} .wbar:nth-child(4) {animation-delay:.05s}
+  .wbar:nth-child(5) {animation-delay:.15s} .wbar:nth-child(6) {animation-delay:.25s}
+  .wbar:nth-child(7) {animation-delay:.10s} .wbar:nth-child(8) {animation-delay:.20s}
+  .wbar:nth-child(9) {animation-delay:.30s} .wbar:nth-child(10){animation-delay:.15s}
+  .wbar:nth-child(11){animation-delay:.05s} .wbar:nth-child(12){animation-delay:.35s}
+  .wbar:nth-child(13){animation-delay:.08s} .wbar:nth-child(14){animation-delay:.22s}
+  .wbar:nth-child(15){animation-delay:.18s}
+  .wbar.paused { animation-play-state:paused; height:4px; opacity:.2; }
+
+  /* live transcript */
+  .transcript-label {
+    font-size:11px; color:#475569; text-align:center;
+    margin-bottom:4px; letter-spacing:.3px;
+  }
+  .transcript-live {
+    background:#0c1525; border:1px solid #1e3a5f; border-radius:10px;
+    padding:14px 16px; height:220px; overflow-y:auto;
+    font-size:13px; line-height:1.75; color:#94a3b8;
+  }
+  .transcript-live p { margin:0 0 6px; }
+  .spk { color:#a78bfa; font-weight:600; }
+  .cursor-blink {
+    display:inline-block; width:2px; height:13px; background:#a78bfa;
+    animation:cblink .9s infinite; vertical-align:middle; margin-left:1px;
+  }
+  @keyframes cblink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* stop button */
+  .btn-stop {
+    width:100%; padding:14px; margin-top:10px;
+    background:#1a1a2e; border:2px solid #ef4444;
+    border-radius:10px; color:#ef4444;
+    font-size:14px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:all .2s;
+  }
+  .btn-stop:hover { background:#ef4444; color:#fff; }
+
+  /* ─── Review step ─── */
+  .done-banner {
+    background:#052e16; border:1px solid #166534; border-radius:10px;
+    padding:14px 16px; margin-top:8px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .done-icon  { font-size:28px; line-height:1; }
+  .done-title { font-size:15px; font-weight:700; color:#34d399; }
+  .done-meta  { font-size:12px; color:#6ee7b7; margin-top:3px; }
+
+  /* AI summary box */
+  .ai-box {
+    background:#1e1b4b; border:1px solid #3730a3; border-radius:10px;
+    padding:16px; margin-top:12px;
+  }
+  .ai-title {
+    font-size:11px; color:#818cf8; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase;
+    margin-bottom:12px; display:flex; align-items:center; gap:6px;
+  }
+  .ai-section { margin-bottom:12px; }
+  .ai-section:last-child { margin-bottom:0; }
+  .ai-sec-label {
+    font-size:10px; color:#6366f1; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px;
+  }
+  .ai-box ul  { margin:0; padding:0 0 0 16px; }
+  .ai-box li  { margin-bottom:5px; font-size:13px; color:#c7d2fe; line-height:1.6; }
+  .urgent-badge {
+    background:#7f1d1d; color:#fca5a5; font-size:10px;
+    padding:1px 5px; border-radius:3px; margin-left:4px; vertical-align:middle;
+  }
+  .ai-assignee { color:#818cf8; font-size:11px; }
+  .risk-item   { color:#fca5a5; }
+
+  /* full transcript */
+  .section-label {
+    font-size:11px; color:#475569; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; margin:14px 0 6px;
+  }
+  .transcript-full {
+    background:#0c1525; border:1px solid #1e3a5f; border-radius:10px;
+    padding:14px 16px; max-height:260px; overflow-y:auto;
+    font-size:13px; line-height:1.75; color:#94a3b8;
+  }
+  .transcript-full p { margin:0 0 6px; }
+
+  /* action buttons */
+  .btn-save {
+    width:100%; padding:16px; margin-top:16px;
+    background:linear-gradient(135deg,#059669,#0d9488);
+    border:none; border-radius:10px; color:#fff;
+    font-size:15px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:opacity .2s; box-shadow:0 4px 16px rgba(5,150,105,.3);
+  }
+  .btn-save:hover { opacity:.9; }
+  .btn-discard {
+    width:100%; padding:12px; margin-top:8px;
+    background:transparent; border:1px solid #334155;
+    border-radius:8px; color:#64748b; font-size:13px; cursor:pointer;
+    transition:all .2s;
+  }
+  .btn-discard:hover { border-color:#ef4444; color:#ef4444; }
+
+  /* ─── Processing overlay ─── */
+  .proc-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(15,23,42,.95); z-index:200;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:14px;
+  }
+  .proc-overlay.visible { display:flex; }
+  .proc-spinner {
+    width:44px; height:44px; border:3px solid #1e293b;
+    border-top-color:#a78bfa; border-radius:50%;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .proc-title { font-size:14px; color:#94a3b8; font-weight:600; }
+  .proc-steps { display:flex; flex-direction:column; gap:8px; }
+  .proc-step  {
+    font-size:12px; color:#475569;
+    display:flex; align-items:center; gap:8px;
+  }
+  .proc-step.ok { color:#34d399; }
+  .proc-dot { width:6px; height:6px; border-radius:50%; background:#334155; flex-shrink:0; }
+  .proc-step.ok .proc-dot { background:#34d399; }
+
+  /* ─── Toast ─── */
+  .rec-toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:#1e293b; border:1px solid #334155; border-radius:8px;
+    padding:11px 20px; font-size:13px; color:#e2e8f0;
+    box-shadow:0 4px 16px rgba(0,0,0,.4); z-index:300;
+    opacity:0; transition:opacity .3s; pointer-events:none; white-space:nowrap;
+  }
+  .rec-toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<header class="rec-topbar">
+  <button class="header-back-btn" onclick="location.href='list.html'">← 一覧</button>
+  <div class="header-logo">🏢 Sample</div>
+  <span class="page-title">会議録音</span>
+</header>
+
+<!-- ── Step indicator ── -->
+<div class="step-bar">
+  <div class="step-item active" id="si0"><div class="step-num">1</div><span>設定</span></div>
+  <div class="step-line" id="sl1"></div>
+  <div class="step-item" id="si1"><div class="step-num">2</div><span>録音</span></div>
+  <div class="step-line" id="sl2"></div>
+  <div class="step-item" id="si2"><div class="step-num">3</div><span>確認</span></div>
+</div>
+
+<div class="rec-content">
+
+  <!-- ═══ Step 1: 設定 ═══ -->
+  <div class="step-panel active" id="panel-setup">
+    <div class="form-card">
+      <h3>会議タイプ</h3>
+      <div class="type-toggle">
+        <div class="type-btn active" id="tbtn-opp" onclick="setType('opp')">
+          <span class="type-icon">💼</span>商談会議
+        </div>
+        <div class="type-btn" id="tbtn-visit" onclick="setType('visit')">
+          <span class="type-icon">🚶</span>現場訪問
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" id="lbl-client">得意先名</label>
+        <input class="form-input" id="inp-client" type="text" placeholder="例: すき家" value="すき家">
+      </div>
+      <div class="form-field">
+        <label class="form-label">担当者</label>
+        <input class="form-input" id="inp-owner" type="text" placeholder="例: 佐藤 淳" value="佐藤 淳">
+      </div>
+      <div class="form-field">
+        <label class="form-label" id="lbl-phase">フェーズ</label>
+        <input class="form-input" id="inp-phase" type="text" placeholder="例: 提案フェーズ" value="提案フェーズ">
+      </div>
+    </div>
+    <button class="btn-start" onclick="startRec()">
+      🎙 録音を開始する
+    </button>
+    <div style="text-align:center;font-size:11px;color:#334155;margin-top:10px;">
+      録音開始と同時に音声認識が起動します
+    </div>
+  </div>
+
+  <!-- ═══ Step 2: 録音中 ═══ -->
+  <div class="step-panel" id="panel-rec">
+    <div class="rec-status-row">
+      <div class="rec-badge">
+        <div class="rec-blink" id="rec-blink"></div>
+        <span id="rec-label">● REC</span>
+      </div>
+      <div class="rec-timer" id="rec-timer">00:00</div>
+    </div>
+    <div class="waveform" id="waveform">
+      <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
+      <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
+      <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
+      <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
+      <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
+    </div>
+    <div class="transcript-label">📝 音声認識 — リアルタイム文字起こし</div>
+    <div class="transcript-live" id="live-box">
+      <span class="cursor-blink" id="cursor"></span>
+    </div>
+    <button class="btn-stop" onclick="stopRec()">⬛ 録音を停止する</button>
+  </div>
+
+  <!-- ═══ Step 3: 確認 ═══ -->
+  <div class="step-panel" id="panel-review">
+    <div class="done-banner">
+      <div class="done-icon">✅</div>
+      <div>
+        <div class="done-title">録音完了 — 議事録を生成しました</div>
+        <div class="done-meta" id="done-meta">—</div>
+      </div>
+    </div>
+
+    <div class="ai-box">
+      <div class="ai-title">✦ AI 要約（自動生成）</div>
+      <div id="ai-content"></div>
+    </div>
+
+    <div class="section-label">📄 文字起こし全文</div>
+    <div class="transcript-full" id="full-box"></div>
+
+    <button class="btn-save" onclick="saveMinutes()">💾 議事録として保存 →</button>
+    <button class="btn-discard" onclick="location.href='list.html'">録音を破棄して一覧へ戻る</button>
+  </div>
+
+</div><!-- /rec-content -->
+
+<!-- ── Processing overlay ── -->
+<div class="proc-overlay" id="proc-overlay">
+  <div class="proc-spinner"></div>
+  <div class="proc-title">AI が議事録を生成中...</div>
+  <div class="proc-steps">
+    <div class="proc-step" id="ps0"><div class="proc-dot"></div>音声データを解析中</div>
+    <div class="proc-step" id="ps1"><div class="proc-dot"></div>発話者を識別中</div>
+    <div class="proc-step" id="ps2"><div class="proc-dot"></div>要約・アクション抽出中</div>
+    <div class="proc-step" id="ps3"><div class="proc-dot"></div>Salesforce レコードと照合中</div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="rec-toast" id="rec-toast"></div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────
+const API_BASE = 'http://localhost:8000/api';
+
+// ─── State ───────────────────────────────────────────────
+let mtype = 'opp';
+let timerTick = null;
+let elapsed = 0;
+let mediaRecorder = null;
+let audioChunks = [];
+
+// ─── Step helpers ────────────────────────────────────────
+function gotoStep(n) {
+  ['panel-setup', 'panel-rec', 'panel-review'].forEach((id, i) => {
+    document.getElementById(id).classList.toggle('active', i === n);
+    const ind = document.getElementById('si' + i);
+    ind.classList.toggle('active', i === n);
+    ind.classList.toggle('done', i < n);
+  });
+  document.getElementById('sl1').classList.toggle('done', n >= 1);
+  document.getElementById('sl2').classList.toggle('done', n >= 2);
+}
+
+// ─── Type selector ───────────────────────────────────────
+function setType(t) {
+  mtype = t;
+  document.getElementById('tbtn-opp').classList.toggle('active', t === 'opp');
+  document.getElementById('tbtn-visit').classList.toggle('active', t === 'visit');
+  const isVisit = t === 'visit';
+  document.getElementById('lbl-client').textContent = isVisit ? '店舗名' : '得意先名';
+  document.getElementById('lbl-phase').textContent  = isVisit ? 'ルート / 訪問種別' : 'フェーズ';
+  document.getElementById('inp-client').value = isVisit ? '田中商店 渋谷南口店' : 'すき家';
+  document.getElementById('inp-owner').value  = isVisit ? '山田 健一' : '佐藤 淳';
+  document.getElementById('inp-phase').value  = isVisit ? '定期巡回 — 月次' : '提案フェーズ';
+}
+
+// ─── Recording ───────────────────────────────────────────
+async function startRec() {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    showToast('❌ マイクアクセスが拒否されました: ' + e.message);
+    return;
+  }
+
+  elapsed = 0;
+  audioChunks = [];
+  document.getElementById('live-box').innerHTML = '<span class="cursor-blink" id="cursor"></span>';
+  gotoStep(1);
+
+  timerTick = setInterval(() => {
+    elapsed++;
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    document.getElementById('rec-timer').textContent = m + ':' + s;
+  }, 1000);
+
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.start(1000);
+}
+
+async function stopRec() {
+  clearInterval(timerTick);
+  document.querySelectorAll('.wbar').forEach(b => b.classList.add('paused'));
+  document.getElementById('rec-blink').style.animation = 'none';
+  document.getElementById('rec-blink').style.background = '#64748b';
+  document.getElementById('rec-label').textContent = '処理中...';
+  document.getElementById('rec-label').style.color = '#64748b';
+
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  }
+
+  const overlay = document.getElementById('proc-overlay');
+  overlay.classList.add('visible');
+
+  const steps = ['ps0', 'ps1', 'ps2', 'ps3'];
+  for (let i = 0; i < steps.length; i++) {
+    await new Promise(r => setTimeout(r, 600));
+    document.getElementById(steps[i]).classList.add('ok');
+  }
+
+  try {
+    await uploadAndProcess();
+  } catch (e) {
+    showToast('❌ AI 処理に失敗しました: ' + e.message);
+  } finally {
+    overlay.classList.remove('visible');
+  }
+}
+
+async function uploadAndProcess() {
+  const blob = new Blob(audioChunks, { type: 'audio/webm' });
+  const form = new FormData();
+  form.append('audio', blob, 'recording.webm');
+  form.append('meeting_type', mtype);
+  form.append('client_name', document.getElementById('inp-client').value);
+  form.append('owner_name', document.getElementById('inp-owner').value);
+  form.append('opportunity_id', '');
+
+  const res = await fetch(`${API_BASE}/recordings`, { method: 'POST', body: form });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+
+  const data = await res.json();
+  buildReview(data);
+  gotoStep(2);
+}
+
+// ─── Review builder ───────────────────────────────────────
+function buildReview(data) {
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  const client = document.getElementById('inp-client').value || '—';
+  const owner  = document.getElementById('inp-owner').value  || '—';
+  const typeLbl = mtype === 'opp' ? '💼 商談会議' : '🚶 現場訪問';
+  document.getElementById('done-meta').textContent =
+    typeLbl + ' ｜ ' + client + ' ｜ 担当: ' + owner + ' ｜ 録音: ' + m + ':' + s;
+
+  const summary = data.summary || {};
+  let html = '';
+
+  html += '<div class="ai-section"><div class="ai-sec-label">主な議題</div><ul>';
+  (summary.topics || []).forEach(t => { html += '<li>' + t + '</li>'; });
+  html += '</ul></div>';
+
+  html += '<div class="ai-section"><div class="ai-sec-label">アクションアイテム</div><ul>';
+  (summary.actions || []).forEach(a => {
+    const badge = a.urgent ? '<span class="urgent-badge">緊急</span>' : '';
+    html += '<li>' + a.text + badge + ' <span class="ai-assignee">→ ' + a.assignee + ' / ' + a.due + '</span></li>';
+  });
+  html += '</ul></div>';
+
+  if ((summary.risks || []).length) {
+    html += '<div class="ai-section"><div class="ai-sec-label">リスク・注意点</div><ul>';
+    summary.risks.forEach(r => { html += '<li class="risk-item">' + r + '</li>'; });
+    html += '</ul></div>';
+  }
+  document.getElementById('ai-content').innerHTML = html;
+  document.getElementById('full-box').innerHTML =
+    '<pre style="white-space:pre-wrap;margin:0;">' + (data.raw_transcript || '') + '</pre>';
+
+  window._pendingMinutes = data;
+}
+
+// ─── Save ─────────────────────────────────────────────────
+async function saveMinutes() {
+  const d = window._pendingMinutes;
+  if (!d) { showToast('❌ 保存データがありません'); return; }
+
+  try {
+    const res = await fetch(`${API_BASE}/minutes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        meeting_id: d.meeting_id,
+        source_type: d.source_type,
+        minutes_markdown: d.minutes_markdown,
+        raw_transcript: d.raw_transcript,
+        summary_topics: d.summary?.topics || [],
+        summary_actions: d.summary?.actions || [],
+        summary_risks: d.summary?.risks || [],
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast('✅ 議事録を保存しました — 一覧に反映されます');
+    setTimeout(() => { location.href = 'list.html'; }, 1400);
+  } catch (e) {
+    showToast('❌ 保存に失敗しました: ' + e.message);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('rec-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
