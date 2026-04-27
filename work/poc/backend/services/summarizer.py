@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
-import anthropic
-from config import ANTHROPIC_API_KEY
+import ollama
+from config import LOCAL_LLM_MODEL, OLLAMA_HOST
 
 
 @dataclass
@@ -39,10 +39,9 @@ _PROMPT_TEMPLATE = """
 
 
 def summarize_transcript(transcript: str, meeting_type: str = "opp") -> SummaryResult:
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
+    client = ollama.Client(host=OLLAMA_HOST)
+    response = client.chat(
+        model=LOCAL_LLM_MODEL,
         messages=[{
             "role": "user",
             "content": _PROMPT_TEMPLATE.format(
@@ -50,9 +49,10 @@ def summarize_transcript(transcript: str, meeting_type: str = "opp") -> SummaryR
                 transcript=transcript,
             ),
         }],
+        options={"temperature": 0.1},  # JSON 出力の安定性のため低温度
     )
 
-    raw = message.content[0].text.strip()
+    raw = response["message"]["content"].strip()
     start = raw.find("{")
     end = raw.rfind("}") + 1
     data = json.loads(raw[start:end])
