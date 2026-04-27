@@ -1,10 +1,14 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from db.database import init_db
 from api.recording import router as recording_router
 from api.minutes import router as minutes_router
 from api.webhooks import router as webhooks_router
+
+_UI_DIR = Path(__file__).parent.parent.parent / "UIMock"
 
 
 @asynccontextmanager
@@ -30,3 +34,8 @@ app.include_router(webhooks_router, prefix="/api")
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+# Must be last: catch-all mount intercepts any path not matched above
+if _UI_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_UI_DIR), html=True), name="ui")
