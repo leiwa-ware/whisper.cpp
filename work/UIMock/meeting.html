@@ -381,7 +381,9 @@
 
 <script>
 // ─── Config ──────────────────────────────────────────────
-const API_BASE = 'http://localhost:8000/api';
+// 相対パス: このページを配信しているサーバーの /api に向ける
+// (FastAPI で http://localhost:8000/meeting.html を開くこと)
+const API_BASE = '/api';
 
 // ─── State ───────────────────────────────────────────────
 let mtype = 'opp';
@@ -389,6 +391,8 @@ let timerTick = null;
 let elapsed = 0;
 let mediaRecorder = null;
 let audioChunks = [];
+
+console.log('[POC] meeting.html loaded. API_BASE =', API_BASE, '| origin =', location.origin);
 
 // ─── Step helpers ────────────────────────────────────────
 function gotoStep(n) {
@@ -417,10 +421,13 @@ function setType(t) {
 
 // ─── Recording ───────────────────────────────────────────
 async function startRec() {
+  console.log('[POC] startRec() called');
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    console.log('[POC] microphone access granted');
   } catch (e) {
+    console.error('[POC] microphone access denied:', e);
     showToast('❌ マイクアクセスが拒否されました: ' + e.message);
     return;
   }
@@ -438,11 +445,18 @@ async function startRec() {
   }, 1000);
 
   mediaRecorder = new MediaRecorder(stream);
-  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) {
+      audioChunks.push(e.data);
+      console.log('[POC] audio chunk received, size =', e.data.size, 'total chunks =', audioChunks.length);
+    }
+  };
   mediaRecorder.start(1000);
+  console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType);
 }
 
 async function stopRec() {
+  console.log('[POC] stopRec() called, elapsed =', elapsed, 's, chunks so far =', audioChunks.length);
   clearInterval(timerTick);
   document.querySelectorAll('.wbar').forEach(b => b.classList.add('paused'));
   document.getElementById('rec-blink').style.animation = 'none';
@@ -450,10 +464,19 @@ async function stopRec() {
   document.getElementById('rec-label').textContent = '処理中...';
   document.getElementById('rec-label').style.color = '#64748b';
 
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+  // onstop が発火するまで待ってから blob を作る（最終チャンクが確実に揃う）
+  const audioReady = new Promise(resolve => {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+      resolve();
+      return;
+    }
+    mediaRecorder.onstop = () => {
+      console.log('[POC] MediaRecorder stopped, total chunks =', audioChunks.length);
+      resolve();
+    };
     mediaRecorder.stop();
     mediaRecorder.stream.getTracks().forEach(t => t.stop());
-  }
+  });
 
   const overlay = document.getElementById('proc-overlay');
   overlay.classList.add('visible');
@@ -464,9 +487,12 @@ async function stopRec() {
     document.getElementById(steps[i]).classList.add('ok');
   }
 
+  await audioReady;  // ここで onstop 完了を保証
+
   try {
     await uploadAndProcess();
   } catch (e) {
+    console.error('[POC] uploadAndProcess failed:', e);
     showToast('❌ AI 処理に失敗しました: ' + e.message);
   } finally {
     overlay.classList.remove('visible');
@@ -475,6 +501,8 @@ async function stopRec() {
 
 async function uploadAndProcess() {
   const blob = new Blob(audioChunks, { type: 'audio/webm' });
+  console.log('[POC] uploadAndProcess() — blob size =', blob.size, 'bytes');
+
   const form = new FormData();
   form.append('audio', blob, 'recording.webm');
   form.append('meeting_type', mtype);
@@ -482,10 +510,13 @@ async function uploadAndProcess() {
   form.append('owner_name', document.getElementById('inp-owner').value);
   form.append('opportunity_id', '');
 
+  console.log('[POC] POST', API_BASE + '/recordings');
   const res = await fetch(`${API_BASE}/recordings`, { method: 'POST', body: form });
+  console.log('[POC] response status =', res.status);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 
   const data = await res.json();
+  console.log('[POC] response data =', data);
   buildReview(data);
   gotoStep(2);
 }
