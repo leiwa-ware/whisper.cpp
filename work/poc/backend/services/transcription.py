@@ -27,7 +27,7 @@ def _to_16k_wav(audio_path: str, tmpdir: str) -> str:
     ]
     proc = subprocess.run(cmd, capture_output=True, timeout=120)
     if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg conversion failed: {proc.stderr.decode()[:300]}")
+        raise RuntimeError(f"ffmpeg conversion failed: {proc.stderr.decode('utf-8', errors='replace')[:300]}")
     return out_path
 
 
@@ -47,7 +47,11 @@ def transcribe_audio(audio_path: str, language: str = "ja") -> TranscriptionResu
             "--no-prints",
         ]
 
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True,
+            encoding="utf-8", errors="replace",  # Windows CP932 デフォルトを上書き
+            timeout=300,
+        )
 
         if proc.returncode != 0:
             raise RuntimeError(

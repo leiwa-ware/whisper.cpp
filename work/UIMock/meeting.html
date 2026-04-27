@@ -333,8 +333,9 @@
       <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
       <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
     </div>
-    <div class="transcript-label">📝 音声認識 — リアルタイム文字起こし</div>
+    <div class="transcript-label">🎙 音声録音中 — 停止後に文字起こし・AI要約を実行します</div>
     <div class="transcript-live" id="live-box">
+      <span style="color:#475569;font-size:12px;">録音中です。話し終えたら「録音を停止する」を押してください。<br>停止後、whisper.cpp による文字起こしと AI 要約が自動で開始されます。</span>
       <span class="cursor-blink" id="cursor"></span>
     </div>
     <button class="btn-stop" onclick="stopRec()">⬛ 録音を停止する</button>
