@@ -333,7 +333,7 @@
       <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
       <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
     </div>
-    <div class="transcript-label">📝 リアルタイム文字起こし（約 5 秒遅延）</div>
+    <div class="transcript-label">📝 音声認識 — リアルタイム文字起こし</div>
     <div class="transcript-live" id="live-box">
       <span class="cursor-blink" id="cursor"></span>
     </div>
@@ -380,35 +380,67 @@
 <div class="rec-toast" id="rec-toast"></div>
 
 <script>
-// ─── Config ──────────────────────────────────────────────
-// FastAPI (port 8000) から配信されていれば相対パス、
-// VS Code Live Preview など別ポートなら絶対 URL にフォールバック。
-const API_BASE = location.port === '8080' ? '/api' : 'http://localhost:8080/api';
+// ─── Data ────────────────────────────────────────────────
+const SCRIPTS = {
+  opp: [
+    { spk:'佐藤 淳（営業担当）', txt:'本日はお時間いただきありがとうございます。前回ご提案した業務用サーバーについての続きをお話しできればと思います。' },
+    { spk:'伊藤 購買部長（得意先）', txt:'こちらこそよろしくお願いします。ただ正直に申し上げますと、他社さんから良い条件をいただいておりまして。' },
+    { spk:'佐藤 淳（営業担当）', txt:'そうでしょうか。具体的にはどのような条件でしょうか？' },
+    { spk:'伊藤 購買部長（得意先）', txt:'単価がこちらより10%ほど低い提案でして。導入コスト全体で見ると無視できない差になります。' },
+    { spk:'田中 一郎（営業担当）', txt:'弊社としても競合他社の動きは把握しております。価格面についてはボリュームディスカウントを適用できる可能性があります。全店展開のスケールでご検討いただけますでしょうか。' },
+    { spk:'伊藤 購買部長（得意先）', txt:'全店展開... それは興味深いですね。現在全国で230店舗ほど運営しています。' },
+    { spk:'佐藤 淳（営業担当）', txt:'その規模でご検討いただければ、単価をかなり改善できると思います。ウィルキンソンの業務用チャネルでも同様の事例がございます。' },
+    { spk:'田中 一郎（営業担当）', txt:'新メニューへの導入予定品についても数量と納期を確認させていただきたいのですが。' },
+    { spk:'伊藤 購買部長（得意先）', txt:'新メニューは来年Q1を予定しています。サーバーも同時リプレイスで考えると、タイミングが合いますね。' },
+    { spk:'佐藤 淳（営業担当）', txt:'では今週中に価格の再提案と全店展開プランをまとめて、来週ご提示させていただきます。上長にも相談して最善の条件を出します。' },
+  ],
+  visit: [
+    { spk:'山田 健一（フィールド担当）', txt:'本日の定期訪問です。まず棚割りの確認から始めてよいでしょうか。' },
+    { spk:'店長（鈴木 さん）', txt:'はい、お願いします。先週から500mlが少し品薄が続いているんですよ。' },
+    { spk:'山田 健一（フィールド担当）', txt:'確認します。ええ、在庫が少ないですね。発注はいつされましたか？' },
+    { spk:'店長（鈴木 さん）', txt:'月曜日に出したはずなんですが、なかなか届かなくて。' },
+    { spk:'山田 健一（フィールド担当）', txt:'確認しました。倉庫側で一時的に欠品が発生していたようです。本日中に緊急手配します。' },
+    { spk:'店長（鈴木 さん）', txt:'助かります。あと、エンド陳列の什器が少し傾いているんですが。' },
+    { spk:'山田 健一（フィールド担当）', txt:'確かに。今すぐ調整します。来月のキャンペーン用POPの貼り替えもここでよろしかったですか？' },
+    { spk:'店長（鈴木 さん）', txt:'そうです。あと冷蔵コーナーの温度チェックも忘れずにお願いします。先月ちょっと心配がありましたので。' },
+    { spk:'山田 健一（フィールド担当）', txt:'了解です。温度計を確認します... 5.2度、問題ありません。記録しておきます。本日のタスクは以上でしょうか？' },
+    { spk:'店長（鈴木 さん）', txt:'はい。次回は来月同じ時期でお願いします。' },
+  ],
+};
+
+const AI_DATA = {
+  opp: {
+    topics: ['競合他社による積極的な価格アプローチが判明（単価差 10%）', '全店展開（230店舗スケール）の可能性が浮上', '来年Q1 新メニュー導入とサーバーリプレイスのタイミング一致'],
+    actions: [
+      { txt:'価格再提案資料作成（全店展開ボリューム想定）', who:'佐藤 淳', due:'今週中', urgent:true },
+      { txt:'新メニュー導入の数量・納期確認',              who:'田中 一郎', due:'今月中', urgent:false },
+      { txt:'上長への競合対応相談・承認取得',              who:'佐藤 淳', due:'今週中', urgent:true },
+    ],
+    risks: ['競合が毎週ルート巡回中 — 意思決定が早まる可能性あり'],
+  },
+  visit: {
+    topics: ['500ml PETボトルの一時欠品（倉庫要因）を確認', 'エンド陳列什器の傾き是正 → 当日対応済み', 'キャンペーンPOP貼り替え実施済み', '冷蔵コーナー温度 5.2度 — 正常範囲内'],
+    actions: [
+      { txt:'500ml PETボトルの緊急手配（倉庫連絡）', who:'山田 健一', due:'本日中',  urgent:true },
+      { txt:'次回訪問の日程調整',                    who:'山田 健一', due:'来月同時期', urgent:false },
+    ],
+    risks: ['在庫欠品が継続する場合は代替SKUでの補填を検討'],
+  },
+};
 
 // ─── State ───────────────────────────────────────────────
 let mtype = 'opp';
 let timerTick = null;
+let lineQueue = [];
 let elapsed = 0;
-let mediaRecorder = null;
-let audioChunks = [];      // 録音停止後の一括処理用（全チャンク）
-let audioMime = '';        // 実際に使われた mimeType を保持
-let initChunk = null;      // WebM/OGG コンテナヘッダ（最初のチャンク）
-let pendingChunks = [];    // 次のリアルタイム送信バッチ用チャンク
-let chunkInterval = null;  // 定期送信タイマー
-let realtimeAvailable = true; // whisper-server が利用可能かどうか
-let isChunkProcessing = false; // 並行リクエスト防止フラグ
-let realtimeContextBuffer = ''; // 直近チャンクの認識テキスト（次チャンクの initial_prompt に使用）
-const REALTIME_MAX_CONTEXT_CHARS = 200; // whisper --prompt の実効上限に合わせた最大文字数
-
-console.log('[POC] meeting.html loaded. API_BASE =', API_BASE, '| origin =', location.origin);
 
 // ─── Step helpers ────────────────────────────────────────
 function gotoStep(n) {
-  ['panel-setup', 'panel-rec', 'panel-review'].forEach((id, i) => {
+  ['panel-setup','panel-rec','panel-review'].forEach((id,i) => {
     document.getElementById(id).classList.toggle('active', i === n);
     const ind = document.getElementById('si' + i);
     ind.classList.toggle('active', i === n);
-    ind.classList.toggle('done', i < n);
+    ind.classList.toggle('done',   i < n);
   });
   document.getElementById('sl1').classList.toggle('done', n >= 1);
   document.getElementById('sl2').classList.toggle('done', n >= 2);
@@ -419,264 +451,131 @@ function setType(t) {
   mtype = t;
   document.getElementById('tbtn-opp').classList.toggle('active', t === 'opp');
   document.getElementById('tbtn-visit').classList.toggle('active', t === 'visit');
-  const isVisit = t === 'visit';
-  document.getElementById('lbl-client').textContent = isVisit ? '店舗名' : '得意先名';
-  document.getElementById('lbl-phase').textContent  = isVisit ? 'ルート / 訪問種別' : 'フェーズ';
-  document.getElementById('inp-client').value = isVisit ? '田中商店 渋谷南口店' : 'すき家';
-  document.getElementById('inp-owner').value  = isVisit ? '山田 健一' : '佐藤 淳';
-  document.getElementById('inp-phase').value  = isVisit ? '定期巡回 — 月次' : '提案フェーズ';
+  if (t === 'visit') {
+    document.getElementById('lbl-client').textContent = '店舗名';
+    document.getElementById('lbl-phase').textContent  = 'ルート / 訪問種別';
+    document.getElementById('inp-client').value = '田中商店 渋谷南口店';
+    document.getElementById('inp-owner').value  = '山田 健一';
+    document.getElementById('inp-phase').value  = '定期巡回 — 月次';
+  } else {
+    document.getElementById('lbl-client').textContent = '得意先名';
+    document.getElementById('lbl-phase').textContent  = 'フェーズ';
+    document.getElementById('inp-client').value = 'すき家';
+    document.getElementById('inp-owner').value  = '佐藤 淳';
+    document.getElementById('inp-phase').value  = '提案フェーズ';
+  }
 }
 
 // ─── Recording ───────────────────────────────────────────
-async function startRec() {
-  console.log('[POC] startRec() called');
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    console.log('[POC] microphone access granted');
-  } catch (e) {
-    console.error('[POC] microphone access denied:', e);
-    showToast('❌ マイクアクセスが拒否されました: ' + e.message);
-    return;
-  }
-
+function startRec() {
   elapsed = 0;
-  audioChunks = [];
-  initChunk = null;
-  pendingChunks = [];
-  realtimeAvailable = true;
-  isChunkProcessing = false;
-  realtimeContextBuffer = ''; // コンテキストバッファをリセット
-  document.getElementById('live-box').innerHTML = '<span style="color:#475569;font-size:12px;">認識中...</span><span class="cursor-blink" id="cursor"></span>';
+  document.getElementById('live-box').innerHTML = '<span class="cursor-blink" id="cursor"></span>';
   gotoStep(1);
 
   timerTick = setInterval(() => {
     elapsed++;
-    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-    const s = String(elapsed % 60).padStart(2, '0');
+    const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
+    const s = String(elapsed % 60).padStart(2,'0');
     document.getElementById('rec-timer').textContent = m + ':' + s;
   }, 1000);
 
-  // ブラウザがサポートする形式を優先順位で選択
-  const preferredMimes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
-  audioMime = preferredMimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
-  console.log('[POC] selected mimeType =', audioMime || '(browser default)');
-
-  mediaRecorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : {});
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size === 0) return;
-    audioChunks.push(e.data);  // 停止後一括処理用
-    if (!initChunk) {
-      initChunk = e.data;      // 最初のチャンク = コンテナヘッダ
-    } else {
-      pendingChunks.push(e.data);
-    }
-    console.log('[POC] chunk received, size =', e.data.size, 'total =', audioChunks.length);
-  };
-  mediaRecorder.start(1000);
-  console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType);
-
-  // 5 秒ごとにリアルタイム文字起こし送信
-  chunkInterval = setInterval(sendRealtimeChunk, 5000);
+  const lines = SCRIPTS[mtype];
+  let delay = 600;
+  lines.forEach((line, i) => {
+    const charTime = line.txt.length * 28;
+    setTimeout(() => appendLine(line), delay);
+    delay += charTime + 1000 + Math.random() * 600;
+  });
 }
 
-async function sendRealtimeChunk() {
-  if (!realtimeAvailable || !initChunk || pendingChunks.length === 0) return;
-  if (isChunkProcessing) {
-    // 前のリクエストがまだ処理中 → チャンクはバッファに蓄積されたまま次回に回す
-    console.log('[POC] previous chunk still processing, skipping interval');
-    return;
-  }
-
-  const batch = pendingChunks.splice(0);  // 取り出してクリア
-  const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
-  const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
-  const blob = new Blob([initChunk, ...batch], { type: mime || 'audio/webm' });
-  const t0 = Date.now();
-  console.log('[POC] realtime chunk send: size =', blob.size, 'bytes, batched chunks =', batch.length);
-
-  isChunkProcessing = true;
-  try {
-    const form = new FormData();
-    form.append('audio', blob, 'chunk.' + ext);
-    // 固有名詞 + 直近チャンクのコンテキストを initial_prompt として付与
-    // → チャンク境界での固有名詞再認識失敗を抑制
-    const prompt = [
-      document.getElementById('inp-client').value,
-      document.getElementById('inp-owner').value,
-      realtimeContextBuffer,
-    ].filter(Boolean).join('、').slice(-REALTIME_MAX_CONTEXT_CHARS);
-    if (prompt) form.append('initial_prompt', prompt);
-
-    const res = await fetch(`${API_BASE}/transcribe-chunk`, { method: 'POST', body: form });
-    const elapsed_ms = Date.now() - t0;
-    console.log('[POC] transcribe-chunk response:', res.status, `(${elapsed_ms}ms)`);
-    if (!res.ok) { console.warn('[POC] transcribe-chunk error body:', await res.text()); return; }
-    const data = await res.json();
-    console.log('[POC] transcribe-chunk result:', data);
-    if (!data.available) {
-      realtimeAvailable = false;
-      console.warn('[POC] whisper-server unavailable, realtime disabled');
-      return;
-    }
-    if (data.text) {
-      // 認識結果をコンテキストバッファに追記（末尾 MAX 文字を保持）
-      realtimeContextBuffer = (realtimeContextBuffer + data.text).slice(-REALTIME_MAX_CONTEXT_CHARS);
-      appendToLiveBox(data.text);
-    } else {
-      console.log('[POC] empty text returned (silence or no speech detected)');
-    }
-  } catch (e) {
-    console.warn('[POC] transcribe-chunk fetch error:', e.message);
-  } finally {
-    isChunkProcessing = false;
-  }
-}
-
-function appendToLiveBox(text) {
+function appendLine(line) {
   const box = document.getElementById('live-box');
-  // 「認識中...」プレースホルダーを除去（初回のみ）
-  const placeholder = box.querySelector('span[style]');
-  if (placeholder) placeholder.remove();
+  const cur = document.getElementById('cursor');
 
   const p = document.createElement('p');
-  p.textContent = text;
-  const cursor = document.getElementById('cursor');
-  box.insertBefore(p, cursor);
-  box.scrollTop = box.scrollHeight;
+  p.innerHTML = '<span class="spk">' + line.spk + '</span>: ';
+  if (cur) cur.remove();
+  box.appendChild(p);
+
+  const newCur = document.createElement('span');
+  newCur.className = 'cursor-blink';
+  newCur.id = 'cursor';
+  p.appendChild(newCur);
+
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < line.txt.length) {
+      newCur.insertAdjacentText('beforebegin', line.txt[i++]);
+      box.scrollTop = box.scrollHeight;
+    } else {
+      clearInterval(iv);
+    }
+  }, 28);
 }
 
-async function stopRec() {
-  console.log('[POC] stopRec() called, elapsed =', elapsed, 's, chunks so far =', audioChunks.length);
+function stopRec() {
   clearInterval(timerTick);
-  clearInterval(chunkInterval);  // リアルタイム送信タイマーを停止
-  chunkInterval = null;
   document.querySelectorAll('.wbar').forEach(b => b.classList.add('paused'));
   document.getElementById('rec-blink').style.animation = 'none';
   document.getElementById('rec-blink').style.background = '#64748b';
   document.getElementById('rec-label').textContent = '処理中...';
   document.getElementById('rec-label').style.color = '#64748b';
 
-  // onstop が発火するまで待ってから blob を作る（最終チャンクが確実に揃う）
-  const audioReady = new Promise(resolve => {
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-      resolve();
-      return;
-    }
-    mediaRecorder.onstop = () => {
-      console.log('[POC] MediaRecorder stopped, total chunks =', audioChunks.length);
-      resolve();
-    };
-    mediaRecorder.stop();
-    mediaRecorder.stream.getTracks().forEach(t => t.stop());
-  });
-
   const overlay = document.getElementById('proc-overlay');
   overlay.classList.add('visible');
+  ['ps0','ps1','ps2','ps3'].forEach((id,i) => {
+    setTimeout(() => document.getElementById(id).classList.add('ok'), 500 + i * 650);
+  });
 
-  const steps = ['ps0', 'ps1', 'ps2', 'ps3'];
-  for (let i = 0; i < steps.length; i++) {
-    await new Promise(r => setTimeout(r, 600));
-    document.getElementById(steps[i]).classList.add('ok');
-  }
-
-  await audioReady;  // ここで onstop 完了を保証
-
-  try {
-    await uploadAndProcess();
-  } catch (e) {
-    console.error('[POC] uploadAndProcess failed:', e);
-    showToast('❌ AI 処理に失敗しました: ' + e.message);
-  } finally {
+  setTimeout(() => {
     overlay.classList.remove('visible');
-  }
-}
-
-async function uploadAndProcess() {
-  const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
-  const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
-  const blob = new Blob(audioChunks, { type: mime || 'audio/webm' });
-  console.log('[POC] uploadAndProcess() — mime =', mime, '| ext =', ext, '| blob size =', blob.size, 'bytes');
-
-  const form = new FormData();
-  form.append('audio', blob, 'recording.' + ext);
-  form.append('meeting_type', mtype);
-  form.append('client_name', document.getElementById('inp-client').value);
-  form.append('owner_name', document.getElementById('inp-owner').value);
-  form.append('opportunity_id', '');
-
-  console.log('[POC] POST', API_BASE + '/recordings');
-  const res = await fetch(`${API_BASE}/recordings`, { method: 'POST', body: form });
-  console.log('[POC] response status =', res.status);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-
-  const data = await res.json();
-  console.log('[POC] response data =', data);
-  buildReview(data);
-  gotoStep(2);
+    buildReview();
+    gotoStep(2);
+  }, 500 + 4 * 650 + 400);
 }
 
 // ─── Review builder ───────────────────────────────────────
-function buildReview(data) {
-  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-  const s = String(elapsed % 60).padStart(2, '0');
+function buildReview() {
+  const m = String(Math.floor(elapsed / 60)).padStart(2,'0');
+  const s = String(elapsed % 60).padStart(2,'0');
   const client = document.getElementById('inp-client').value || '—';
   const owner  = document.getElementById('inp-owner').value  || '—';
   const typeLbl = mtype === 'opp' ? '💼 商談会議' : '🚶 現場訪問';
   document.getElementById('done-meta').textContent =
     typeLbl + ' ｜ ' + client + ' ｜ 担当: ' + owner + ' ｜ 録音: ' + m + ':' + s;
 
-  const summary = data.summary || {};
+  const d = AI_DATA[mtype];
   let html = '';
 
   html += '<div class="ai-section"><div class="ai-sec-label">主な議題</div><ul>';
-  (summary.topics || []).forEach(t => { html += '<li>' + t + '</li>'; });
+  d.topics.forEach(t => { html += '<li>' + t + '</li>'; });
   html += '</ul></div>';
 
   html += '<div class="ai-section"><div class="ai-sec-label">アクションアイテム</div><ul>';
-  (summary.actions || []).forEach(a => {
+  d.actions.forEach(a => {
     const badge = a.urgent ? '<span class="urgent-badge">緊急</span>' : '';
-    html += '<li>' + a.text + badge + ' <span class="ai-assignee">→ ' + a.assignee + ' / ' + a.due + '</span></li>';
+    html += '<li>' + a.txt + badge + ' <span class="ai-assignee">→ ' + a.who + ' / ' + a.due + '</span></li>';
   });
   html += '</ul></div>';
 
-  if ((summary.risks || []).length) {
+  if (d.risks.length) {
     html += '<div class="ai-section"><div class="ai-sec-label">リスク・注意点</div><ul>';
-    summary.risks.forEach(r => { html += '<li class="risk-item">' + r + '</li>'; });
+    d.risks.forEach(r => { html += '<li class="risk-item">' + r + '</li>'; });
     html += '</ul></div>';
   }
   document.getElementById('ai-content').innerHTML = html;
-  document.getElementById('full-box').innerHTML =
-    '<pre style="white-space:pre-wrap;margin:0;">' + (data.raw_transcript || '') + '</pre>';
 
-  window._pendingMinutes = data;
+  let thtml = '';
+  SCRIPTS[mtype].forEach(l => {
+    thtml += '<p><span class="spk">' + l.spk + '</span>: ' + l.txt + '</p>';
+  });
+  document.getElementById('full-box').innerHTML = thtml;
 }
 
 // ─── Save ─────────────────────────────────────────────────
-async function saveMinutes() {
-  const d = window._pendingMinutes;
-  if (!d) { showToast('❌ 保存データがありません'); return; }
-
-  try {
-    const res = await fetch(`${API_BASE}/minutes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        meeting_id: d.meeting_id,
-        source_type: d.source_type,
-        minutes_markdown: d.minutes_markdown,
-        raw_transcript: d.raw_transcript,
-        summary_topics: d.summary?.topics || [],
-        summary_actions: d.summary?.actions || [],
-        summary_risks: d.summary?.risks || [],
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    showToast('✅ 議事録を保存しました — 一覧に反映されます');
-    setTimeout(() => { location.href = 'list.html'; }, 1400);
-  } catch (e) {
-    showToast('❌ 保存に失敗しました: ' + e.message);
-  }
+function saveMinutes() {
+  showToast('✅ 議事録を保存しました — 一覧に反映されます');
+  setTimeout(() => { location.href = 'list.html'; }, 1400);
 }
 
 function showToast(msg) {

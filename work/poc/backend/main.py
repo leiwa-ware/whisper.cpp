@@ -13,7 +13,7 @@ from api.recording import router as recording_router
 from api.minutes import router as minutes_router
 from api.webhooks import router as webhooks_router
 from api.realtime import router as realtime_router
-from config import WHISPER_SERVER_BIN, WHISPER_SERVER_PORT, WHISPER_FINAL_MODEL
+from config import WHISPER_SERVER_BIN, WHISPER_SERVER_PORT, WHISPER_MODEL, WHISPER_FINAL_MODEL, OLLAMA_HOST, LOCAL_LLM_MODEL
 
 _UI_DIR = Path(__file__).parent.parent.parent / "UIMock"
 _log = logging.getLogger("uvicorn.error")  # uvicorn のロガーに乗せることで出力される
@@ -95,6 +95,7 @@ app.include_router(realtime_router, prefix="/api")
 @app.get("/api/health")
 async def health():
     whisper_ok = False
+    ollama_ok = False
     try:
         async with httpx.AsyncClient() as client:
             r = await client.get(
@@ -103,12 +104,20 @@ async def health():
             whisper_ok = r.status_code < 500
     except Exception:
         pass
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{OLLAMA_HOST}/api/tags", timeout=2.0)
+            ollama_ok = r.status_code == 200
+    except Exception:
+        pass
     return {
         "status": "ok",
         "whisper_server": whisper_ok,
         "whisper_server_port": WHISPER_SERVER_PORT,
         "whisper_final_model": WHISPER_FINAL_MODEL,
-        "note": "whisper-server must use base model for realtime (<1s/chunk). Final uses WHISPER_FINAL_MODEL.",
+        "ollama": ollama_ok,
+        "llm_model": LOCAL_LLM_MODEL,
+        "note": "whisper-server uses base model for realtime. Final transcription uses WHISPER_FINAL_MODEL.",
     }
 
 

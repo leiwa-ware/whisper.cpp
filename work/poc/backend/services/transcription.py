@@ -1,9 +1,14 @@
+import os
 import subprocess
 import json
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from config import WHISPER_CLI, WHISPER_FINAL_MODEL
+from config import WHISPER_CLI, WHISPER_FINAL_MODEL, WHISPER_VAD_MODEL
+
+# whisper の --prompt は「音声の直前に来る自然なテキスト」として設計されている。
+# コンマ区切りの単語リストをそのまま渡すとデコーダーが混乱し精度が大幅に低下する。
+# 固有名詞のみを自然文形式で渡す（呼び出し元から context として受け取る）。
 
 
 @dataclass
@@ -53,8 +58,15 @@ def transcribe_audio(
             "--no-speech-thold", "0.6",
             "--entropy-thold", "2.4",
         ]
+        # 固有名詞のみを自然文として渡す（コンマ区切りの単語リストは精度を低下させる）
         if initial_prompt:
             cmd += ["--prompt", initial_prompt]
+
+        # VAD は環境変数 WHISPER_VAD_ENABLED=1 で明示有効化した場合のみ使用。
+        # デフォルト無効: Silero-VAD のデフォルト閾値が短発話を過剰にカットし
+        # 幻覚フレーズを誘発するため、--no-speech-thold による抑制を優先する。
+        if WHISPER_VAD_MODEL and os.environ.get("WHISPER_VAD_ENABLED") == "1":
+            cmd += ["--vad", "--vad-model", WHISPER_VAD_MODEL]
 
         proc = subprocess.run(
             cmd, capture_output=True, text=True,

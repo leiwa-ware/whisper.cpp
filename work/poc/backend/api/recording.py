@@ -24,8 +24,10 @@ async def upload_recording(
         tmp_path = tmp.name
 
     try:
-        # 得意先名・担当者名をプロンプトに含めると固有名詞の認識精度が上がる
-        context = ", ".join(filter(None, [client_name, owner_name]))
+        # 得意先名・担当者名を渡すことで固有名詞の認識精度が上がる。
+        # whisper の --prompt は自然なテキストを期待するため、
+        # コンマ区切りリストや単語羅列は避ける。
+        context = " ".join(filter(None, [client_name, owner_name]))
         transcription = transcribe_audio(tmp_path, language="ja", initial_prompt=context)
 
         # 誤認識補正 + 要約を 1 回の LLM 呼び出しで実行（メモリ節約・高速化）

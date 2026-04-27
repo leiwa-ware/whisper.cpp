@@ -1,7 +1,11 @@
 import json
+import logging
+import re
 from dataclasses import dataclass, field
 import ollama
 from config import LOCAL_LLM_MODEL, OLLAMA_HOST
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -54,6 +58,45 @@ _COMBINED_PROMPT = """以下は日本語の業務会議の音声認識テキス�
 """
 
 
+def _parse_llm_json(raw: str, fallback_transcript: str) -> dict:
+    """LLM 出力から JSON を抽出。失敗時は文字起こしを保持した最小辞書を返す。"""
+    # qwen3 / deepseek-r1 等の thinking モデルは <think>...</think> を出力する。
+    # ブロック内に { } が含まれると後続の JSON 検索が誤動作するため先に除去する。
+    raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+
+    # 試行 1: 最初の { から最後の } を取る
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    if start >= 0 and end > start:
+        try:
+            return json.loads(raw[start:end])
+        except json.JSONDecodeError as e:
+            _log.warning("JSON parse failed (attempt 1): %s", e)
+
+    # 試行 2: ```json ... ``` コードブロック内を探す
+    m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except json.JSONDecodeError as e:
+            _log.warning("JSON parse failed (attempt 2): %s", e)
+
+    # 試行 3: 全体を JSON としてパース
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # 全失敗: 文字起こし本文は保持、構造化は空で返す
+    _log.error("All JSON parse attempts failed. Returning raw transcript as corrected.")
+    return {
+        "corrected_transcript": fallback_transcript,
+        "topics": [],
+        "actions": [],
+        "risks": [],
+    }
+
+
 def correct_and_summarize(
     raw_transcript: str,
     meeting_type: str = "opp",
@@ -71,16 +114,21 @@ def correct_and_summarize(
     )
 
     client = ollama.Client(host=OLLAMA_HOST)
-    response = client.chat(
-        model=LOCAL_LLM_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        options={"temperature": 0.1},
-    )
+    try:
+        response = client.chat(
+            model=LOCAL_LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            options={"temperature": 0.1},
+        )
+        raw = response["message"]["content"].strip()
+    except Exception as e:
+        # Ollama 未起動・接続失敗時は補正なし・空の要約で継続（データ喪失防止）
+        _log.warning("Ollama unavailable: %s", e)
+        result = SummaryResult()
+        result.minutes_markdown = _to_markdown(raw_transcript, result)
+        return raw_transcript, result
 
-    raw = response["message"]["content"].strip()
-    start = raw.find("{")
-    end = raw.rfind("}") + 1
-    data = json.loads(raw[start:end])
+    data = _parse_llm_json(raw, raw_transcript)
 
     corrected = data.get("corrected_transcript", raw_transcript)
 
