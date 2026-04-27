@@ -24,7 +24,9 @@ async def upload_recording(
         tmp_path = tmp.name
 
     try:
-        transcription = transcribe_audio(tmp_path, language="ja")
+        # 得意先名・担当者名をプロンプトに含めると固有名詞の認識精度が上がる
+        prompt = ", ".join(filter(None, [client_name, owner_name]))
+        transcription = transcribe_audio(tmp_path, language="ja", initial_prompt=prompt)
         summary = summarize_transcript(transcription.text, meeting_type=meeting_type)
 
         participants = [p.strip() for p in owner_name.split(",") if p.strip()]

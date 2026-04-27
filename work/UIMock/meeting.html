@@ -486,6 +486,12 @@ async function sendRealtimeChunk() {
   try {
     const form = new FormData();
     form.append('audio', blob, 'chunk.' + ext);
+    // 得意先名・担当者名を渡すことで固有名詞の認識精度を向上させる
+    const prompt = [
+      document.getElementById('inp-client').value,
+      document.getElementById('inp-owner').value,
+    ].filter(Boolean).join(', ');
+    if (prompt) form.append('initial_prompt', prompt);
     const res = await fetch(`${API_BASE}/transcribe-chunk`, { method: 'POST', body: form });
     if (!res.ok) { console.warn('[POC] transcribe-chunk HTTP', res.status); return; }
     const data = await res.json();

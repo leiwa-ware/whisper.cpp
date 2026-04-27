@@ -31,7 +31,11 @@ def _to_16k_wav(audio_path: str, tmpdir: str) -> str:
     return out_path
 
 
-def transcribe_audio(audio_path: str, language: str = "ja") -> TranscriptionResult:
+def transcribe_audio(
+    audio_path: str,
+    language: str = "ja",
+    initial_prompt: str = "",
+) -> TranscriptionResult:
     """whisper-cli を subprocess で呼び出し転写結果を返す。"""
     with tempfile.TemporaryDirectory() as tmpdir:
         wav_path = _to_16k_wav(audio_path, tmpdir)
@@ -46,6 +50,8 @@ def transcribe_audio(audio_path: str, language: str = "ja") -> TranscriptionResu
             "-of", out_base,
             "--no-prints",
         ]
+        if initial_prompt:
+            cmd += ["--prompt", initial_prompt]
 
         proc = subprocess.run(
             cmd, capture_output=True, text=True,
