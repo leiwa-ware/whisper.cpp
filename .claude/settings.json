@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && { ! git diff --quiet HEAD 2>/dev/null || git ls-files --others --exclude-standard | grep -q . 2>/dev/null; } && git add -A && git commit -m \"snapshot: $(date +%Y%m%d-%H%M%S) pre-edit\" 2>/dev/null || true",
+            "statusMessage": "改修前の状態をGitにコミット中..."
+          }
+        ]
+      }
+    ]
+  }
+}

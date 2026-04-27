@@ -141,4 +141,3 @@ Models are stored in custom `ggml` binary format (not GGUF). The original OpenAI
 ## Windows-specific notes
 
 The project builds with MSVC. The CMakeLists.txt defines `_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR` on Windows to work around an MSVC STL issue that causes crashes in the Java bindings. Several MSVC warnings are suppressed project-wide (see the `MSVC_WARNING_FLAGS` block at the bottom of `CMakeLists.txt`).
-test
