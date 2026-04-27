@@ -381,9 +381,9 @@
 
 <script>
 // ─── Config ──────────────────────────────────────────────
-// 相対パス: このページを配信しているサーバーの /api に向ける
-// (FastAPI で http://localhost:8000/meeting.html を開くこと)
-const API_BASE = '/api';
+// FastAPI (port 8000) から配信されていれば相対パス、
+// VS Code Live Preview など別ポートなら絶対 URL にフォールバック。
+const API_BASE = location.port === '8000' ? '/api' : 'http://localhost:8000/api';
 
 // ─── State ───────────────────────────────────────────────
 let mtype = 'opp';
@@ -391,6 +391,7 @@ let timerTick = null;
 let elapsed = 0;
 let mediaRecorder = null;
 let audioChunks = [];
+let audioMime = '';   // 実際に使われた mimeType を保持
 
 console.log('[POC] meeting.html loaded. API_BASE =', API_BASE, '| origin =', location.origin);
 
@@ -444,7 +445,12 @@ async function startRec() {
     document.getElementById('rec-timer').textContent = m + ':' + s;
   }, 1000);
 
-  mediaRecorder = new MediaRecorder(stream);
+  // ブラウザがサポートする形式を優先順位で選択
+  const preferredMimes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
+  audioMime = preferredMimes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+  console.log('[POC] selected mimeType =', audioMime || '(browser default)');
+
+  mediaRecorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : {});
   mediaRecorder.ondataavailable = (e) => {
     if (e.data.size > 0) {
       audioChunks.push(e.data);
@@ -452,7 +458,7 @@ async function startRec() {
     }
   };
   mediaRecorder.start(1000);
-  console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType);
+  console.log('[POC] MediaRecorder started, actual mimeType =', mediaRecorder.mimeType);
 }
 
 async function stopRec() {
@@ -500,11 +506,13 @@ async function stopRec() {
 }
 
 async function uploadAndProcess() {
-  const blob = new Blob(audioChunks, { type: 'audio/webm' });
-  console.log('[POC] uploadAndProcess() — blob size =', blob.size, 'bytes');
+  const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
+  const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
+  const blob = new Blob(audioChunks, { type: mime || 'audio/webm' });
+  console.log('[POC] uploadAndProcess() — mime =', mime, '| ext =', ext, '| blob size =', blob.size, 'bytes');
 
   const form = new FormData();
-  form.append('audio', blob, 'recording.webm');
+  form.append('audio', blob, 'recording.' + ext);
   form.append('meeting_type', mtype);
   form.append('client_name', document.getElementById('inp-client').value);
   form.append('owner_name', document.getElementById('inp-owner').value);
