@@ -10,6 +10,14 @@ WHISPER_CLI = os.environ.get(
     else str(REPO_ROOT / "build/bin/whisper-cli"),
 )
 
+WHISPER_SERVER_BIN = os.environ.get(
+    "WHISPER_SERVER_BIN",
+    str(REPO_ROOT / "build/bin/Release/whisper-server.exe")
+    if os.name == "nt"
+    else str(REPO_ROOT / "build/bin/whisper-server"),
+)
+WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8178"))
+
 WHISPER_MODEL = os.environ.get(
     "WHISPER_MODEL",
     str(REPO_ROOT / "models/ggml-base.bin"),

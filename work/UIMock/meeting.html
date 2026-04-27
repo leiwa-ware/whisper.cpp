@@ -333,9 +333,8 @@
       <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
       <div class="wbar"></div><div class="wbar"></div><div class="wbar"></div>
     </div>
-    <div class="transcript-label">🎙 音声録音中 — 停止後に文字起こし・AI要約を実行します</div>
+    <div class="transcript-label">📝 リアルタイム文字起こし（約 5 秒遅延）</div>
     <div class="transcript-live" id="live-box">
-      <span style="color:#475569;font-size:12px;">録音中です。話し終えたら「録音を停止する」を押してください。<br>停止後、whisper.cpp による文字起こしと AI 要約が自動で開始されます。</span>
       <span class="cursor-blink" id="cursor"></span>
     </div>
     <button class="btn-stop" onclick="stopRec()">⬛ 録音を停止する</button>
@@ -391,8 +390,12 @@ let mtype = 'opp';
 let timerTick = null;
 let elapsed = 0;
 let mediaRecorder = null;
-let audioChunks = [];
-let audioMime = '';   // 実際に使われた mimeType を保持
+let audioChunks = [];      // 録音停止後の一括処理用（全チャンク）
+let audioMime = '';        // 実際に使われた mimeType を保持
+let initChunk = null;      // WebM/OGG コンテナヘッダ（最初のチャンク）
+let pendingChunks = [];    // 次のリアルタイム送信バッチ用チャンク
+let chunkInterval = null;  // 定期送信タイマー
+let realtimeAvailable = true; // whisper-server が利用可能かどうか
 
 console.log('[POC] meeting.html loaded. API_BASE =', API_BASE, '| origin =', location.origin);
 
@@ -436,7 +439,10 @@ async function startRec() {
 
   elapsed = 0;
   audioChunks = [];
-  document.getElementById('live-box').innerHTML = '<span class="cursor-blink" id="cursor"></span>';
+  initChunk = null;
+  pendingChunks = [];
+  realtimeAvailable = true;
+  document.getElementById('live-box').innerHTML = '<span style="color:#475569;font-size:12px;">認識中...</span><span class="cursor-blink" id="cursor"></span>';
   gotoStep(1);
 
   timerTick = setInterval(() => {
@@ -453,18 +459,61 @@ async function startRec() {
 
   mediaRecorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : {});
   mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) {
-      audioChunks.push(e.data);
-      console.log('[POC] audio chunk received, size =', e.data.size, 'total chunks =', audioChunks.length);
+    if (e.data.size === 0) return;
+    audioChunks.push(e.data);  // 停止後一括処理用
+    if (!initChunk) {
+      initChunk = e.data;      // 最初のチャンク = コンテナヘッダ
+    } else {
+      pendingChunks.push(e.data);
     }
+    console.log('[POC] chunk received, size =', e.data.size, 'total =', audioChunks.length);
   };
   mediaRecorder.start(1000);
-  console.log('[POC] MediaRecorder started, actual mimeType =', mediaRecorder.mimeType);
+  console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType);
+
+  // 5 秒ごとにリアルタイム文字起こし送信
+  chunkInterval = setInterval(sendRealtimeChunk, 5000);
+}
+
+async function sendRealtimeChunk() {
+  if (!realtimeAvailable || !initChunk || pendingChunks.length === 0) return;
+  const batch = pendingChunks.splice(0);  // 取り出してクリア
+  const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
+  const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
+  const blob = new Blob([initChunk, ...batch], { type: mime || 'audio/webm' });
+  console.log('[POC] realtime chunk: size =', blob.size, 'bytes');
+
+  try {
+    const form = new FormData();
+    form.append('audio', blob, 'chunk.' + ext);
+    const res = await fetch(`${API_BASE}/transcribe-chunk`, { method: 'POST', body: form });
+    if (!res.ok) { console.warn('[POC] transcribe-chunk HTTP', res.status); return; }
+    const data = await res.json();
+    if (!data.available) { realtimeAvailable = false; return; }
+    if (data.text) appendToLiveBox(data.text);
+  } catch (e) {
+    console.warn('[POC] transcribe-chunk error:', e.message);
+  }
+}
+
+function appendToLiveBox(text) {
+  const box = document.getElementById('live-box');
+  // 「認識中...」プレースホルダーを除去（初回のみ）
+  const placeholder = box.querySelector('span[style]');
+  if (placeholder) placeholder.remove();
+
+  const p = document.createElement('p');
+  p.textContent = text;
+  const cursor = document.getElementById('cursor');
+  box.insertBefore(p, cursor);
+  box.scrollTop = box.scrollHeight;
 }
 
 async function stopRec() {
   console.log('[POC] stopRec() called, elapsed =', elapsed, 's, chunks so far =', audioChunks.length);
   clearInterval(timerTick);
+  clearInterval(chunkInterval);  // リアルタイム送信タイマーを停止
+  chunkInterval = null;
   document.querySelectorAll('.wbar').forEach(b => b.classList.add('paused'));
   document.getElementById('rec-blink').style.animation = 'none';
   document.getElementById('rec-blink').style.background = '#64748b';
