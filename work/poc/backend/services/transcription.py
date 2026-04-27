@@ -49,6 +49,9 @@ def transcribe_audio(
             "--output-json",
             "-of", out_base,
             "--no-prints",
+            # 無音区間での幻覚（「ご視聴ありがとうございました」等）を抑制
+            "--no-speech-thold", "0.6",
+            "--entropy-thold", "2.4",
         ]
         if initial_prompt:
             cmd += ["--prompt", initial_prompt]
