@@ -16,7 +16,7 @@ from api.realtime import router as realtime_router
 from config import WHISPER_SERVER_BIN, WHISPER_SERVER_PORT, WHISPER_MODEL
 
 _UI_DIR = Path(__file__).parent.parent.parent / "UIMock"
-_log = logging.getLogger("poc.whisper_server")
+_log = logging.getLogger("uvicorn.error")  # uvicorn のロガーに乗せることで出力される
 
 
 async def _ensure_whisper_server() -> Optional[subprocess.Popen]:
@@ -94,7 +94,16 @@ app.include_router(realtime_router, prefix="/api")
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    whisper_ok = False
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                f"http://127.0.0.1:{WHISPER_SERVER_PORT}/", timeout=1.0
+            )
+            whisper_ok = r.status_code < 500
+    except Exception:
+        pass
+    return {"status": "ok", "whisper_server": whisper_ok, "whisper_port": WHISPER_SERVER_PORT}
 
 
 # Must be last: catch-all mount intercepts any path not matched above
