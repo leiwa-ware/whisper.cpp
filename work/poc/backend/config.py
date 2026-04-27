@@ -18,7 +18,7 @@ WHISPER_MODEL = os.environ.get(
 DB_PATH = os.environ.get("DB_PATH", "poc_meeting.db")
 
 # ローカル LLM 設定（Ollama）。外部 API 不要・オフライン動作。
-LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "qwen2.5:7b")
+LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "qwen2.5-coder:7b")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 AUDIO_UPLOAD_DIR = Path(os.environ.get("AUDIO_UPLOAD_DIR", "/tmp/poc_audio"))
