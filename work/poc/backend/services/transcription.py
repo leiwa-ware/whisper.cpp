@@ -3,7 +3,7 @@ import json
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from config import WHISPER_CLI, WHISPER_MODEL
+from config import WHISPER_CLI, WHISPER_FINAL_MODEL
 
 
 @dataclass
@@ -43,7 +43,7 @@ def transcribe_audio(
 
         cmd = [
             WHISPER_CLI,
-            "-m", WHISPER_MODEL,
+            "-m", WHISPER_FINAL_MODEL,  # 最終文字起こしは精度優先モデル
             "-f", wav_path,
             "-l", language,
             "--output-json",

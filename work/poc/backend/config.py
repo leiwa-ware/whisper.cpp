@@ -23,6 +23,14 @@ WHISPER_MODEL = os.environ.get(
     str(REPO_ROOT / "models/ggml-base.bin"),
 )
 
+# 録音停止後の最終文字起こし用モデル（精度優先・速度不問）
+# medium が未ダウンロードの場合は WHISPER_MODEL にフォールバック
+_medium = REPO_ROOT / "models/ggml-medium.bin"
+WHISPER_FINAL_MODEL = os.environ.get(
+    "WHISPER_FINAL_MODEL",
+    str(_medium) if _medium.exists() else WHISPER_MODEL,
+)
+
 DB_PATH = os.environ.get("DB_PATH", "poc_meeting.db")
 
 # ローカル LLM 設定（Ollama）。外部 API 不要・オフライン動作。

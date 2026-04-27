@@ -38,6 +38,36 @@ _PROMPT_TEMPLATE = """
 """
 
 
+_CORRECTION_PROMPT = """以下は日本語の業務会議を音声認識したテキストです。
+誤認識と思われる箇所を、文脈から推測して自然なビジネス日本語に修正してください。
+
+ルール：
+- 修正は最小限にし、元の発言の意味・順序を保持する
+- 明らかな音声認識ミス（「妖怪」→「了解」など）のみ修正する
+- 修正後のテキストのみ出力し、説明・注釈は不要
+{context_line}
+
+音声認識テキスト:
+{transcript}
+"""
+
+
+def correct_transcript(raw_text: str, context: str = "") -> str:
+    """LLM で音声認識テキストの誤認識を文脈補正する。"""
+    context_line = f"- 会議の文脈（固有名詞のヒント）: {context}" if context else ""
+    prompt = _CORRECTION_PROMPT.format(
+        context_line=context_line,
+        transcript=raw_text,
+    )
+    client = ollama.Client(host=OLLAMA_HOST)
+    response = client.chat(
+        model=LOCAL_LLM_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        options={"temperature": 0.1},
+    )
+    return response["message"]["content"].strip()
+
+
 def summarize_transcript(transcript: str, meeting_type: str = "opp") -> SummaryResult:
     client = ollama.Client(host=OLLAMA_HOST)
     response = client.chat(

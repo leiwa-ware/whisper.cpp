@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from services.transcription import transcribe_audio
-from services.summarizer import summarize_transcript
+from services.summarizer import summarize_transcript, correct_transcript
 from services.minutes_connector import WhisperCppAdapter
 
 router = APIRouter()
@@ -27,7 +27,10 @@ async def upload_recording(
         # 得意先名・担当者名をプロンプトに含めると固有名詞の認識精度が上がる
         prompt = ", ".join(filter(None, [client_name, owner_name]))
         transcription = transcribe_audio(tmp_path, language="ja", initial_prompt=prompt)
-        summary = summarize_transcript(transcription.text, meeting_type=meeting_type)
+
+        # LLM で誤認識を補正してから要約（「妖怪」→「了解」など音響的ミスを修正）
+        corrected_text = correct_transcript(transcription.text, context=prompt)
+        summary = summarize_transcript(corrected_text, meeting_type=meeting_type)
 
         participants = [p.strip() for p in owner_name.split(",") if p.strip()]
         opp_id = opportunity_id or f"OPP-{uuid.uuid4().hex[:6].upper()}"
@@ -40,7 +43,8 @@ async def upload_recording(
         return {
             "meeting_id": opp_id,
             "source_type": "whisper_cpp",
-            "raw_transcript": transcription.text,
+            "raw_transcript": corrected_text,        # 補正済みを表示・保存に使用
+            "raw_transcript_original": transcription.text,  # 元の認識結果（デバッグ用）
             "minutes_markdown": adapter.to_markdown(),
             "summary": {
                 "topics": summary.topics,
