@@ -396,6 +396,7 @@ let initChunk = null;      // WebM/OGG コンテナヘッダ（最初のチャ�
 let pendingChunks = [];    // 次のリアルタイム送信バッチ用チャンク
 let chunkInterval = null;  // 定期送信タイマー
 let realtimeAvailable = true; // whisper-server が利用可能かどうか
+let isChunkProcessing = false; // 並行リクエスト防止フラグ
 
 console.log('[POC] meeting.html loaded. API_BASE =', API_BASE, '| origin =', location.origin);
 
@@ -442,6 +443,7 @@ async function startRec() {
   initChunk = null;
   pendingChunks = [];
   realtimeAvailable = true;
+  isChunkProcessing = false;
   document.getElementById('live-box').innerHTML = '<span style="color:#475569;font-size:12px;">認識中...</span><span class="cursor-blink" id="cursor"></span>';
   gotoStep(1);
 
@@ -477,28 +479,46 @@ async function startRec() {
 
 async function sendRealtimeChunk() {
   if (!realtimeAvailable || !initChunk || pendingChunks.length === 0) return;
+  if (isChunkProcessing) {
+    // 前のリクエストがまだ処理中 → チャンクはバッファに蓄積されたまま次回に回す
+    console.log('[POC] previous chunk still processing, skipping interval');
+    return;
+  }
+
   const batch = pendingChunks.splice(0);  // 取り出してクリア
   const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
   const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
   const blob = new Blob([initChunk, ...batch], { type: mime || 'audio/webm' });
-  console.log('[POC] realtime chunk: size =', blob.size, 'bytes');
+  const t0 = Date.now();
+  console.log('[POC] realtime chunk send: size =', blob.size, 'bytes, batched chunks =', batch.length);
 
+  isChunkProcessing = true;
   try {
     const form = new FormData();
     form.append('audio', blob, 'chunk.' + ext);
-    // 得意先名・担当者名を渡すことで固有名詞の認識精度を向上させる
     const prompt = [
       document.getElementById('inp-client').value,
       document.getElementById('inp-owner').value,
     ].filter(Boolean).join(', ');
     if (prompt) form.append('initial_prompt', prompt);
+
     const res = await fetch(`${API_BASE}/transcribe-chunk`, { method: 'POST', body: form });
-    if (!res.ok) { console.warn('[POC] transcribe-chunk HTTP', res.status); return; }
+    const elapsed_ms = Date.now() - t0;
+    console.log('[POC] transcribe-chunk response:', res.status, `(${elapsed_ms}ms)`);
+    if (!res.ok) { console.warn('[POC] transcribe-chunk error body:', await res.text()); return; }
     const data = await res.json();
-    if (!data.available) { realtimeAvailable = false; return; }
+    console.log('[POC] transcribe-chunk result:', data);
+    if (!data.available) {
+      realtimeAvailable = false;
+      console.warn('[POC] whisper-server unavailable, realtime disabled');
+      return;
+    }
     if (data.text) appendToLiveBox(data.text);
+    else console.log('[POC] empty text returned (silence or no speech detected)');
   } catch (e) {
-    console.warn('[POC] transcribe-chunk error:', e.message);
+    console.warn('[POC] transcribe-chunk fetch error:', e.message);
+  } finally {
+    isChunkProcessing = false;
   }
 }
 

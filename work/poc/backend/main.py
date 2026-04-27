@@ -13,7 +13,7 @@ from api.recording import router as recording_router
 from api.minutes import router as minutes_router
 from api.webhooks import router as webhooks_router
 from api.realtime import router as realtime_router
-from config import WHISPER_SERVER_BIN, WHISPER_SERVER_PORT, WHISPER_MODEL
+from config import WHISPER_SERVER_BIN, WHISPER_SERVER_PORT, WHISPER_FINAL_MODEL
 
 _UI_DIR = Path(__file__).parent.parent.parent / "UIMock"
 _log = logging.getLogger("uvicorn.error")  # uvicorn のロガーに乗せることで出力される
@@ -103,7 +103,13 @@ async def health():
             whisper_ok = r.status_code < 500
     except Exception:
         pass
-    return {"status": "ok", "whisper_server": whisper_ok, "whisper_port": WHISPER_SERVER_PORT}
+    return {
+        "status": "ok",
+        "whisper_server": whisper_ok,
+        "whisper_server_port": WHISPER_SERVER_PORT,
+        "whisper_final_model": WHISPER_FINAL_MODEL,
+        "note": "whisper-server must use base model for realtime (<1s/chunk). Final uses WHISPER_FINAL_MODEL.",
+    }
 
 
 # Must be last: catch-all mount intercepts any path not matched above
