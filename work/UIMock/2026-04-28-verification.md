@@ -130,7 +130,7 @@ ffmpeg -filters 2>&1 | findstr arnndn
 python -c "
 import tempfile, os
 from services.noise_reduction import reduce_noise
-src = '../../samples/jfk.wav'
+src = '../../../samples/jfk.wav'
 with tempfile.TemporaryDirectory() as d:
     out = d + '/clean.wav'
     result = reduce_noise(src, out)
