@@ -253,30 +253,69 @@ curl http://localhost:8080/api/health | python -m json.tool
 
 ### 5.2 industry パラメータ有無の確認
 
-```bash
-# ※ リポジトリルート (whisper.cpp/) から実行すること
+> **注意**: 転写 + LLM 処理で **1〜2分** かかる。`-s` は使わない（エラーが隠れる）。
+> ※ リポジトリルート (whisper.cpp/) から実行すること
 
+**手順 ①: レスポンスをファイルに保存しながら HTTP ステータスを確認**
+
+```bash
 # industry=logistics を明示指定
-curl -s -X POST http://localhost:8080/api/recordings \
+curl -X POST http://localhost:8080/api/recordings \
+  --max-time 180 \
+  -o response_test.json \
+  -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
   -F "audio=@samples/jfk.wav" \
   -F "meeting_type=visit" \
   -F "client_name=田中倉庫" \
   -F "owner_name=山田 健一" \
-  -F "industry=logistics" \
-  | python -m json.tool
-
-# industry パラメータなし（デフォルト sales）
-curl -s -X POST http://localhost:8080/api/recordings \
-  -F "audio=@samples/jfk.wav" \
-  -F "meeting_type=opp" \
-  -F "client_name=すき家" \
-  | python -m json.tool
+  -F "industry=logistics"
 ```
 
-**確認ポイント**:
-- HTTP 500 が返らないこと
-- `raw_transcript` フィールドが存在すること
-- `summary.topics` が空でないこと
+**期待される出力**（処理完了後に表示）:
+```
+--- HTTP Status: 201 | Time: 45.3s ---
+```
+- `201` であること（`500` や `0` は失敗）
+- `Time` が 0.x 秒なら接続失敗（処理されていない）
+
+**手順 ②: レスポンス内容の検証**
+
+```bash
+python -c "
+import json, sys
+with open('response_test.json') as f:
+    data = json.load(f)
+print('meeting_id     :', data.get('meeting_id'))
+print('raw_transcript :', data.get('raw_transcript', '')[:80])
+topics = data.get('summary', {}).get('topics', [])
+actions = data.get('summary', {}).get('actions', [])
+print('topics         :', topics)
+print('actions count  :', len(actions))
+assert data.get('raw_transcript'), 'FAIL: raw_transcript が空'
+assert topics, 'FAIL: summary.topics が空'
+print('PASS: 全フィールド確認OK')
+"
+```
+
+**industry パラメータなし（デフォルト sales）の確認**
+
+```bash
+curl -X POST http://localhost:8080/api/recordings \
+  --max-time 180 \
+  -o response_test2.json \
+  -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
+  -F "audio=@samples/jfk.wav" \
+  -F "meeting_type=opp" \
+  -F "client_name=すき家"
+
+python -c "
+import json
+with open('response_test2.json') as f:
+    data = json.load(f)
+print('PASS' if data.get('raw_transcript') else 'FAIL')
+print('topics:', data.get('summary', {}).get('topics', []))
+"
+```
 
 ---
 
