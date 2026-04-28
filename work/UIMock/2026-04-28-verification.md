@@ -55,21 +55,47 @@ LOCAL_LLM_MODEL    : qwen3:1.7b                    ← qwen2.5-coder:7b では�
 NOISE_REDUCTION    : moderate
 ```
 
-**Kotoba モデルダウンロード後の確認**:
+**Kotoba-Whisper v2.2 GGML モデルのダウンロード**:
+
+> ⚠️ `kotoba-tech/kotoba-whisper-v2.2-ggml` は**存在しない**。
+> 正しいソース: `Pomni/kotoba-whisper-v2.2-ggml-allquants`（公開・認証不要）
+
 ```bash
-# Kotoba-Whisper v2.2 GGML をダウンロードしてから再確認
+# リアルタイム転写用（whisper-server 常駐）: Q8_0 / 818MB
+curl -L -o models/ggml-kotoba-v2.2-q8_0.bin \
+  https://huggingface.co/Pomni/kotoba-whisper-v2.2-ggml-allquants/resolve/main/ggml-kotoba-v2.2-q8_0.bin
+
+# 最終転写用（whisper-cli 都度実行）: Q5_K / 538MB ← 精度と速度のバランス最適
+curl -L -o models/ggml-kotoba-v2.2-q5_k.bin \
+  https://huggingface.co/Pomni/kotoba-whisper-v2.2-ggml-allquants/resolve/main/ggml-kotoba-v2.2-q5_k.bin
+
+# または huggingface_hub で取得（認証不要）
 python -c "
 from huggingface_hub import hf_hub_download
 hf_hub_download(
-    repo_id='kotoba-tech/kotoba-whisper-v2.2-ggml',
-    filename='ggml-model-q5_k_m.bin',
-    local_dir='../../models/',
+    repo_id='Pomni/kotoba-whisper-v2.2-ggml-allquants',
+    filename='ggml-kotoba-v2.2-q5_k.bin',
+    local_dir='models/',
 )
 "
+```
+
+**利用可能な量子化バリアント** (`Pomni/kotoba-whisper-v2.2-ggml-allquants`):
+
+| ファイル名 | サイズ | 用途 |
+|---|---|---|
+| `ggml-kotoba-v2.2-q5_k.bin` | 538MB | **最終転写（推奨）** |
+| `ggml-kotoba-v2.2-q8_0.bin` | 818MB | **リアルタイム（推奨）** |
+| `ggml-kotoba-v2.2-q4_k.bin` | 444MB | メモリ節約優先 |
+| `ggml-kotoba-v2.2-f16.bin` | 1.52GB | 最高精度（RAM に余裕がある場合） |
+
+ダウンロード後の設定確認:
+```bash
 python -c "
-from config import WHISPER_FINAL_MODEL
+from config import WHISPER_MODEL, WHISPER_FINAL_MODEL
+print('WHISPER_MODEL      :', WHISPER_MODEL)
 print('WHISPER_FINAL_MODEL:', WHISPER_FINAL_MODEL)
-# → ...models/ggml-kotoba... と表示されること
+# → 両方とも ...models/ggml-kotoba-v2.2... と表示されること
 "
 ```
 
