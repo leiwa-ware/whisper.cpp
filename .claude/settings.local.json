@@ -49,7 +49,8 @@
       "Bash(curl -s http://localhost:8000/api/health)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('content:', repr\\(d['message']['content'][:200]\\)\\)\")",
       "WebSearch",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8178 -ErrorAction SilentlyContinue)"
     ]
   }
 }

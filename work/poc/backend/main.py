@@ -51,9 +51,9 @@ async def _ensure_whisper_server() -> Optional[subprocess.Popen]:
         stderr=subprocess.DEVNULL,
     )
 
-    # ポートが Listen されるまで最大 10 秒待機
+    # ポートが Listen されるまで最大 30 秒待機（大型モデルのロードに時間がかかるため）
     async with httpx.AsyncClient() as client:
-        for _ in range(20):
+        for _ in range(60):
             await asyncio.sleep(0.5)
             try:
                 await client.get(url, timeout=1.0)
@@ -62,7 +62,7 @@ async def _ensure_whisper_server() -> Optional[subprocess.Popen]:
             except Exception:
                 pass
 
-    _log.error("whisper-server did not become ready in 10 s")
+    _log.error("whisper-server did not become ready in 30 s")
     proc.terminate()
     return None
 
