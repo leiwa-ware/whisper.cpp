@@ -113,12 +113,16 @@ def correct_and_summarize(
         transcript=raw_transcript,
     )
 
-    client = ollama.Client(host=OLLAMA_HOST, timeout=120)
+    client = ollama.Client(host=OLLAMA_HOST, timeout=300)
     try:
         response = client.chat(
             model=LOCAL_LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0.1},
+            options={
+                "temperature": 0.1,
+                "num_ctx": 2048,      # KV キャッシュを半減（448MB → 224MB）
+                "num_predict": 512,   # 出力トークン上限（JSON 出力に十分）
+            },
         )
         raw = response["message"]["content"].strip()
     except Exception as e:
