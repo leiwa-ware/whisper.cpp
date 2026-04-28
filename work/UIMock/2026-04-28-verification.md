@@ -254,21 +254,23 @@ curl http://localhost:8080/api/health | python -m json.tool
 ### 5.2 industry パラメータ有無の確認
 
 ```bash
+# ※ リポジトリルート (whisper.cpp/) から実行すること
+
 # industry=logistics を明示指定
 curl -s -X POST http://localhost:8080/api/recordings \
-  -F "audio=@../../../samples/jfk.wav" \
+  -F "audio=@samples/jfk.wav" \
   -F "meeting_type=visit" \
   -F "client_name=田中倉庫" \
   -F "owner_name=山田 健一" \
   -F "industry=logistics" \
-  | python -m json.tool | head -30
+  | python -m json.tool
 
 # industry パラメータなし（デフォルト sales）
 curl -s -X POST http://localhost:8080/api/recordings \
-  -F "audio=@../../../samples/jfk.wav" \
+  -F "audio=@samples/jfk.wav" \
   -F "meeting_type=opp" \
   -F "client_name=すき家" \
-  | python -m json.tool | head -30
+  | python -m json.tool
 ```
 
 **確認ポイント**:

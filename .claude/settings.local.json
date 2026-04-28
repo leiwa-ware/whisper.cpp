@@ -52,7 +52,8 @@
       "Bash(python -c ' *)",
       "PowerShell(Get-NetTCPConnection -LocalPort 8178 -ErrorAction SilentlyContinue)",
       "Bash(curl -s http://localhost:8080/api/health)",
-      "Bash(curl -s -X POST http://localhost:8080/api/recordings -F audio=@samples/jfk.wav -F meeting_type=visit -F client_name=田中倉庫 -F 'owner_name=山田 健一' -F industry=logistics)"
+      "Bash(curl -s -X POST http://localhost:8080/api/recordings -F audio=@samples/jfk.wav -F meeting_type=visit -F client_name=田中倉庫 -F 'owner_name=山田 健一' -F industry=logistics)",
+      "Bash(curl -v -X POST http://localhost:8080/api/recordings -F audio=@samples/jfk.wav -F meeting_type=visit -F client_name=田中倉庫 -F 'owner_name=山田 健一' -F industry=logistics)"
     ]
   }
 }
