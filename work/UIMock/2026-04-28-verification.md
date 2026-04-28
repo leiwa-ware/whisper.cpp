@@ -261,7 +261,7 @@ curl http://localhost:8080/api/health | python -m json.tool
 ```bash
 # industry=logistics を明示指定（出力先も絶対パス）
 curl -X POST http://localhost:8080/api/recordings \
-  --max-time 180 \
+  --max-time 360 \
   -o C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
   -F "audio=@C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/samples/jfk.wav" \
@@ -303,7 +303,7 @@ print('PASS: 全フィールド確認OK')
 ```bash
 # ① curl（出力先も絶対パス）
 curl -X POST http://localhost:8080/api/recordings \
-  --max-time 180 \
+  --max-time 360 \
   -o C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test2.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
   -F "audio=@C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/samples/jfk.wav" \
@@ -387,7 +387,7 @@ else:
 
 # テスト音声がある場合
 curl -X POST http://localhost:8080/api/recordings \
-  --max-time 180 \
+  --max-time 360 \
   -o C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
   -F "audio=@/c/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3" \
