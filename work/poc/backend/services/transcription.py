@@ -79,6 +79,8 @@ def transcribe_audio(
                 "--vad-min-speech-duration-ms", "200",
             ]
 
+        import logging as _logging
+        _logging.getLogger(__name__).warning("whisper cmd: %s", " ".join(cmd))
         proc = subprocess.run(
             cmd, capture_output=True, text=True,
             encoding="utf-8", errors="replace",  # Windows CP932 デフォルトを上書き
@@ -87,7 +89,10 @@ def transcribe_audio(
 
         if proc.returncode != 0:
             raise RuntimeError(
-                f"whisper-cli failed (code {proc.returncode}): {proc.stderr[:500]}"
+                f"whisper-cli failed (code {proc.returncode})\n"
+                f"CMD: {' '.join(cmd)}\n"
+                f"STDERR: {proc.stderr[:800]}\n"
+                f"STDOUT: {proc.stdout[:400]}"
             )
 
         result_file = Path(out_base + ".json")

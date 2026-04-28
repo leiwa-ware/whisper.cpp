@@ -438,10 +438,11 @@ print(r.text[:200])
 
 # medium モデルで転写
 WHISPER_FINAL_MODEL=models/ggml-medium.bin python -c "
+import logging
+logging.basicConfig(level=logging.WARNING)
 from services.transcription import transcribe_audio
-r = transcribe_audio('/path/to/test_audio.wav', language='ja')
-open('medium_output.txt', 'w', encoding='utf-8').write(r.text)
-print('medium:', r.text[:100])
+r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav', language='ja')
+print('OK:', r.text[:100])
 "
 
 # Kotoba モデルで転写
