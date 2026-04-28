@@ -344,8 +344,10 @@ start http://localhost:8080/meeting.html
 
 ブラウザの DevTools Console で:
 ```javascript
-console.log(API_BASE);
-// → "http://localhost:8080/api" または "/api" と表示されること
+// console.log(API_BASE);
+// // → "http://localhost:8080/api" または "/api" と表示されること
+// スクリプト内の変数を間接的に確認
+document.querySelector('script') && eval('API_BASE')
 ```
 
 ---
@@ -384,13 +386,15 @@ else:
 # なければ jfk.wav（英語）でパイプライン自体の動作確認だけ行う
 
 # テスト音声がある場合
-curl -s -X POST http://localhost:8080/api/recordings \
-  -F "audio=@/path/to/japanese_meeting.wav" \
+curl -X POST http://localhost:8080/api/recordings \
+  --max-time 180 \
+  -o C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test.json \
+  -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
+  -F "audio=@/c/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3" \
   -F "meeting_type=opp" \
   -F "client_name=テスト商事" \
   -F "owner_name=鈴木 花子" \
-  -F "industry=sales" \
-  | python -m json.tool
+  -F "industry=sales"
 ```
 
 ### 8.2 合格基準
