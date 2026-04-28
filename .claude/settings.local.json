@@ -47,7 +47,8 @@
       "Bash(xargs -I{} bash -c 'echo \"$\\(du -sh \"{}\" 2>/dev/null | cut -f1\\)  {}\"')",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(m['name'], m['size']//1024//1024,'MB'\\) for m in d.get\\('models',[]\\)]\")",
       "Bash(curl -s http://localhost:8000/api/health)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('content:', repr\\(d['message']['content'][:200]\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('content:', repr\\(d['message']['content'][:200]\\)\\)\")",
+      "WebSearch"
     ]
   }
 }
