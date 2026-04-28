@@ -328,8 +328,8 @@ print('topics:', data.get('summary', {}).get('topics', []))
 ### 6.1 ブラウザで meeting.html を開く
 
 ```bash
-# FastAPI サーバー経由でアクセス
-start http://localhost:8080
+# FastAPI サーバー経由でアクセス（index.html がないため /meeting.html を直接指定）
+start http://localhost:8080/meeting.html
 ```
 
 ### 6.2 業種セレクター確認チェックリスト
