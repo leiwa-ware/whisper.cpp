@@ -36,14 +36,15 @@ async def transcribe_chunk(
             form["initial_prompt"] = initial_prompt
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 with open(wav_path, "rb") as f:
                     r = await client.post(
                         url,
                         files={"file": ("audio.wav", f, "audio/wav")},
                         data=form,
                     )
-        except httpx.ConnectError:
+        except (httpx.ConnectError, httpx.TimeoutException):
+            # whisper-server not running or too slow (e.g. large model on CPU)
             return {"text": "", "available": False}
 
         if r.status_code != 200:
