@@ -256,7 +256,7 @@ curl http://localhost:8000/api/health | python -m json.tool
 ```bash
 # industry=logistics を明示指定
 curl -s -X POST http://localhost:8000/api/recordings \
-  -F "audio=@../../samples/jfk.wav" \
+  -F "audio=@../../../samples/jfk.wav" \
   -F "meeting_type=visit" \
   -F "client_name=田中倉庫" \
   -F "owner_name=山田 健一" \
@@ -265,7 +265,7 @@ curl -s -X POST http://localhost:8000/api/recordings \
 
 # industry パラメータなし（デフォルト sales）
 curl -s -X POST http://localhost:8000/api/recordings \
-  -F "audio=@../../samples/jfk.wav" \
+  -F "audio=@../../../samples/jfk.wav" \
   -F "meeting_type=opp" \
   -F "client_name=すき家" \
   | python -m json.tool | head -30
