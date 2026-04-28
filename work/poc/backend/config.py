@@ -19,11 +19,10 @@ WHISPER_SERVER_BIN = os.environ.get(
 )
 WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8178"))
 
-# Kotoba-Whisper: 日本語特化蒸留モデル (GGML 形式)
-# ダウンロード: huggingface_hub で kotoba-tech/kotoba-whisper-v2.2-ggml を取得
-#   python -c "from huggingface_hub import hf_hub_download; \
-#     hf_hub_download('kotoba-tech/kotoba-whisper-v2.2-ggml', \
-#     'ggml-model-q5_k_m.bin', local_dir='models/')"
+# Kotoba-Whisper v2.2: 日本語特化蒸留モデル (GGML 形式)
+# ダウンロード元: Pomni/kotoba-whisper-v2.2-ggml-allquants (公開・認証不要)
+#   curl -L -o models/ggml-kotoba-v2.2-q5_k.bin \
+#     https://huggingface.co/Pomni/kotoba-whisper-v2.2-ggml-allquants/resolve/main/ggml-kotoba-v2.2-q5_k.bin
 _kotoba_candidates = sorted(_glob.glob(str(REPO_ROOT / "models/ggml-kotoba*.bin")))
 _kotoba_model = _kotoba_candidates[-1] if _kotoba_candidates else ""
 
