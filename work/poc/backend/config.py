@@ -17,7 +17,7 @@ WHISPER_SERVER_BIN = os.environ.get(
     if os.name == "nt"
     else str(REPO_ROOT / "build/bin/whisper-server"),
 )
-WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8178"))
+WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8300"))
 
 # Kotoba-Whisper v2.2: 日本語特化蒸留モデル (GGML 形式)
 # ダウンロード元: Pomni/kotoba-whisper-v2.2-ggml-allquants (公開・認証不要)

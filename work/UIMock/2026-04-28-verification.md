@@ -233,10 +233,10 @@ print('実転写テストは Step 8 の E2E テストで実施する')
 cd work\poc\backend
 
 # サーバー起動（バックグラウンド）
-uvicorn main:app --port 8000 --reload &
+uvicorn main:app --port 8080 --reload &
 
 # ヘルスチェック
-curl http://localhost:8000/api/health | python -m json.tool
+curl http://localhost:8080/api/health | python -m json.tool
 ```
 
 **期待結果**:
@@ -255,7 +255,7 @@ curl http://localhost:8000/api/health | python -m json.tool
 
 ```bash
 # industry=logistics を明示指定
-curl -s -X POST http://localhost:8000/api/recordings \
+curl -s -X POST http://localhost:8080/api/recordings \
   -F "audio=@../../../samples/jfk.wav" \
   -F "meeting_type=visit" \
   -F "client_name=田中倉庫" \
@@ -264,7 +264,7 @@ curl -s -X POST http://localhost:8000/api/recordings \
   | python -m json.tool | head -30
 
 # industry パラメータなし（デフォルト sales）
-curl -s -X POST http://localhost:8000/api/recordings \
+curl -s -X POST http://localhost:8080/api/recordings \
   -F "audio=@../../../samples/jfk.wav" \
   -F "meeting_type=opp" \
   -F "client_name=すき家" \
@@ -284,7 +284,7 @@ curl -s -X POST http://localhost:8000/api/recordings \
 
 ```bash
 # FastAPI サーバー経由でアクセス
-start http://localhost:8000
+start http://localhost:8080
 ```
 
 ### 6.2 業種セレクター確認チェックリスト
@@ -300,7 +300,7 @@ start http://localhost:8000
 ブラウザの DevTools Console で:
 ```javascript
 console.log(API_BASE);
-// → "http://localhost:8000/api" または "/api" と表示されること
+// → "http://localhost:8080/api" または "/api" と表示されること
 ```
 
 ---
@@ -339,7 +339,7 @@ else:
 # なければ jfk.wav（英語）でパイプライン自体の動作確認だけ行う
 
 # テスト音声がある場合
-curl -s -X POST http://localhost:8000/api/recordings \
+curl -s -X POST http://localhost:8080/api/recordings \
   -F "audio=@/path/to/japanese_meeting.wav" \
   -F "meeting_type=opp" \
   -F "client_name=テスト商事" \
@@ -430,20 +430,20 @@ cd C:\work\30.Projects\102.AI_Projects\whisper.cpp\whisper.cpp\work\poc\backend
 .\venv\Scripts\activate
 
 # デフォルト設定で起動
-uvicorn main:app --port 8000 --reload
+uvicorn main:app --port 8080 --reload
 
 # ノイズ除去を aggressive にして起動（倉庫環境）
-NOISE_REDUCTION_LEVEL=aggressive uvicorn main:app --port 8000 --reload
+NOISE_REDUCTION_LEVEL=aggressive uvicorn main:app --port 8080 --reload
 
 # Kotoba モデルを明示指定して起動
 WHISPER_FINAL_MODEL=../../models/ggml-kotoba-whisper-v2.2-q5km.bin \
-  uvicorn main:app --port 8000 --reload
+  uvicorn main:app --port 8080 --reload
 
 # すべてのオプションを組み合わせ
 NOISE_REDUCTION_LEVEL=moderate \
   WHISPER_VAD_ENABLED=1 \
   LOCAL_LLM_MODEL=qwen3:1.7b \
-  uvicorn main:app --port 8000 --reload
+  uvicorn main:app --port 8080 --reload
 ```
 
 ### 停止
