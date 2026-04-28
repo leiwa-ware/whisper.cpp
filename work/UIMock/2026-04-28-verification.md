@@ -272,6 +272,7 @@ curl -X POST http://localhost:8080/api/recordings \
 ```
 
 **期待される出力**（処理完了後に表示）:
+1〜2分後に --- HTTP Status: 201 | Time: xx.xs --- が表示されれば成功です。
 ```
 --- HTTP Status: 201 | Time: 45.3s ---
 ```
@@ -304,7 +305,7 @@ curl -X POST http://localhost:8080/api/recordings \
   --max-time 180 \
   -o response_test2.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
-  -F "audio=@samples/jfk.wav" \
+  -F "audio=@C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/samples/jfk.wav" \
   -F "meeting_type=opp" \
   -F "client_name=すき家"
 
