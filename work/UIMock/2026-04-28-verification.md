@@ -254,7 +254,7 @@ curl http://localhost:8080/api/health | python -m json.tool
 ### 5.2 industry パラメータ有無の確認
 
 > **注意**: 転写 + LLM 処理で **1〜2分** かかる。`-s` は使わない（エラーが隠れる）。
-> ※ リポジトリルート (whisper.cpp/) から実行すること
+> ファイルパスは **絶対パス** を使う（カレントディレクトリに依存しない）。
 
 **手順 ①: レスポンスをファイルに保存しながら HTTP ステータスを確認**
 
@@ -264,7 +264,7 @@ curl -X POST http://localhost:8080/api/recordings \
   --max-time 180 \
   -o response_test.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
-  -F "audio=@samples/jfk.wav" \
+  -F "audio=@C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/samples/jfk.wav" \
   -F "meeting_type=visit" \
   -F "client_name=田中倉庫" \
   -F "owner_name=山田 健一" \
