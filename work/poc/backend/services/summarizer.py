@@ -113,7 +113,7 @@ def correct_and_summarize(
         transcript=raw_transcript,
     )
 
-    client = ollama.Client(host=OLLAMA_HOST)
+    client = ollama.Client(host=OLLAMA_HOST, timeout=120)
     try:
         response = client.chat(
             model=LOCAL_LLM_MODEL,
