@@ -403,7 +403,7 @@ curl -X POST http://localhost:8080/api/recordings \
 |---|---|---|
 | HTTP 200 が返る | `curl` のレスポンスコード | 200 または 201 |
 | `raw_transcript` が存在 | JSON フィールド確認 | フィールドあり・空でない |
-| `summary.topics` が存在 | JSON フィールド確認 | 配列（空でも可） |
+| `summary.topics` が存在 | JSON フィールド確認 | 配列（Ollama 失敗時は空配列、正常時は非空） |
 | `minutes_markdown` が存在 | JSON フィールド確認 | 文字列あり |
 | qwen3:1.7b が使われた | Ollama のログ確認 | qwen3:1.7b が呼ばれていること |
 | OOM が発生しない | タスクマネージャーで確認 | 8.7GB RAM 環境でスワップなし |
