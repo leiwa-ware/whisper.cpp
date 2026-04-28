@@ -612,6 +612,7 @@ async function uploadAndProcess() {
   form.append('client_name', document.getElementById('inp-client').value);
   form.append('owner_name', document.getElementById('inp-owner').value);
   form.append('opportunity_id', '');
+  form.append('industry', document.getElementById('inp-industry').value);
 
   console.log('[POC] POST', API_BASE + '/recordings');
   const res = await fetch(`${API_BASE}/recordings`, { method: 'POST', body: form });
