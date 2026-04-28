@@ -259,10 +259,10 @@ curl http://localhost:8080/api/health | python -m json.tool
 **手順 ①: レスポンスをファイルに保存しながら HTTP ステータスを確認**
 
 ```bash
-# industry=logistics を明示指定
+# industry=logistics を明示指定（出力先も絶対パス）
 curl -X POST http://localhost:8080/api/recordings \
   --max-time 180 \
-  -o response_test.json \
+  -o C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
   -F "audio=@C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/samples/jfk.wav" \
   -F "meeting_type=visit" \
@@ -271,8 +271,7 @@ curl -X POST http://localhost:8080/api/recordings \
   -F "industry=logistics"
 ```
 
-**期待される出力**（処理完了後に表示）:
-1〜2分後に --- HTTP Status: 201 | Time: xx.xs --- が表示されれば成功です。
+**期待される出力**（1〜2分後に表示）:
 ```
 --- HTTP Status: 201 | Time: 45.3s ---
 ```
@@ -283,8 +282,9 @@ curl -X POST http://localhost:8080/api/recordings \
 
 ```bash
 python -c "
-import json, sys
-with open('response_test.json') as f:
+import json
+path = 'C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test.json'
+with open(path, encoding='utf-8') as f:
     data = json.load(f)
 print('meeting_id     :', data.get('meeting_id'))
 print('raw_transcript :', data.get('raw_transcript', '')[:80])
@@ -301,17 +301,20 @@ print('PASS: 全フィールド確認OK')
 **industry パラメータなし（デフォルト sales）の確認**
 
 ```bash
+# ① curl（出力先も絶対パス）
 curl -X POST http://localhost:8080/api/recordings \
   --max-time 180 \
-  -o response_test2.json \
+  -o C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test2.json \
   -w "\n--- HTTP Status: %{http_code} | Time: %{time_total}s ---\n" \
   -F "audio=@C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/samples/jfk.wav" \
   -F "meeting_type=opp" \
   -F "client_name=すき家"
 
+# ② 検証（curl 完了後に実行）
 python -c "
 import json
-with open('response_test2.json') as f:
+path = 'C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/response_test2.json'
+with open(path, encoding='utf-8') as f:
     data = json.load(f)
 print('PASS' if data.get('raw_transcript') else 'FAIL')
 print('topics:', data.get('summary', {}).get('topics', []))
