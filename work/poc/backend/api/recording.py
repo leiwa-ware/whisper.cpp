@@ -36,11 +36,17 @@ async def upload_recording(
             industry=industry,
         )
         context = " ".join(filter(None, [client_name, owner_name]))
-        transcription = transcribe_audio(tmp_path, language="ja", initial_prompt=initial_prompt)
+        loop = asyncio.get_event_loop()
+        # subprocess.run と ollama.Client.chat はブロッキングなのでスレッドプールで実行
+        transcription = await loop.run_in_executor(
+            None, lambda: transcribe_audio(tmp_path, language="ja", initial_prompt=initial_prompt)
+        )
 
         # 誤認識補正 + 要約を 1 回の LLM 呼び出しで実行（メモリ節約・高速化）
-        corrected_text, summary = correct_and_summarize(
-            transcription.text, meeting_type=meeting_type, context=context
+        corrected_text, summary = await loop.run_in_executor(
+            None, lambda: correct_and_summarize(
+                transcription.text, meeting_type=meeting_type, context=context
+            )
         )
 
         participants = [p.strip() for p in owner_name.split(",") if p.strip()]
