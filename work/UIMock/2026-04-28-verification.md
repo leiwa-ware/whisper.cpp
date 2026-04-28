@@ -445,7 +445,7 @@ print(r.text[:200])
 WHISPER_FINAL_MODEL="C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-medium.bin" python -c "
 import logging; logging.basicConfig(level=logging.WARNING)
 from services.transcription import transcribe_audio
-r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav', language='ja')
+r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3', language='ja')
 open('medium_output.txt', 'w', encoding='utf-8').write(r.text)
 print('medium:', r.text[:100])
 "
@@ -454,24 +454,36 @@ print('medium:', r.text[:100])
 WHISPER_FINAL_MODEL="C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin" python -c "
 import logging; logging.basicConfig(level=logging.WARNING)
 from services.transcription import transcribe_audio
-r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav', language='ja')
+r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3', language='ja')
 open('kotoba_output.txt', 'w', encoding='utf-8').write(r.text)
 print('kotoba:', r.text[:100])
 "
 
-# CER 計算（python-cer ライブラリが必要）
+# CER 計算（外部ライブラリ不要・純粋 Python）
 python -c "
-ref  = open('正解テキスト.txt', encoding='utf-8').read()
-med  = open('medium_output.txt', encoding='utf-8').read()
-kot  = open('kotoba_output.txt', encoding='utf-8').read()
+def edit_distance(s1, s2):
+    dp = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1, 1):
+        prev, dp[0] = dp[0], i
+        for j, c2 in enumerate(s2, 1):
+            prev, dp[j] = dp[j], prev if c1 == c2 else 1 + min(prev, dp[j], dp[j-1])
+    return dp[len(s2)]
 
 def cer(ref, hyp):
-    import editdistance
-    return editdistance.eval(ref, hyp) / len(ref)
+    ref = ref.strip().replace(' ', '')
+    hyp = hyp.strip().replace(' ', '')
+    return edit_distance(ref, hyp) / max(len(ref), 1)
 
-print(f'medium CER : {cer(ref, med):.1%}')
-print(f'kotoba CER : {cer(ref, kot):.1%}')
-print('合格基準: Kotoba の CER が medium より 20% 以上低いこと')
+ref = open('正解テキスト.txt', encoding='utf-8').read()
+med = open('medium_output.txt', encoding='utf-8').read()
+kot = open('kotoba_output.txt', encoding='utf-8').read()
+cer_med = cer(ref, med)
+cer_kot = cer(ref, kot)
+print(f'medium CER : {cer_med:.1%}')
+print(f'kotoba CER : {cer_kot:.1%}')
+improvement = (cer_med - cer_kot) / cer_med * 100 if cer_med > 0 else 0
+print(f'改善率     : {improvement:.1f}%')
+print('PASS' if improvement >= 20 else 'FAIL: 改善率が 20% 未満')
 "
 ```
 
