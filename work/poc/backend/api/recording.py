@@ -5,6 +5,7 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from services.transcription import transcribe_audio
 from services.summarizer import correct_and_summarize
 from services.minutes_connector import WhisperCppAdapter
+from services.vocabulary import build_initial_prompt
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ async def upload_recording(
     client_name: str = Form(""),
     owner_name: str = Form(""),
     opportunity_id: str = Form(""),
+    industry: str = Form("sales"),
 ):
     """音声ファイルを受信し、転写→要約→minutesMarkdown を返す。"""
     suffix = Path(audio.filename or "audio.webm").suffix or ".webm"
@@ -24,11 +26,16 @@ async def upload_recording(
         tmp_path = tmp.name
 
     try:
-        # 得意先名・担当者名を渡すことで固有名詞の認識精度が上がる。
-        # whisper の --prompt は自然なテキストを期待するため、
-        # コンマ区切りリストや単語羅列は避ける。
+        # 業界別語彙と固有名詞を自然文形式の --prompt として渡す。
+        # コンマ区切り単語リストはデコーダーを混乱させるため使用しない。
+        initial_prompt = build_initial_prompt(
+            meeting_type=meeting_type,
+            client_name=client_name,
+            owner_name=owner_name,
+            industry=industry,
+        )
         context = " ".join(filter(None, [client_name, owner_name]))
-        transcription = transcribe_audio(tmp_path, language="ja", initial_prompt=context)
+        transcription = transcribe_audio(tmp_path, language="ja", initial_prompt=initial_prompt)
 
         # 誤認識補正 + 要約を 1 回の LLM 呼び出しで実行（メモリ節約・高速化）
         corrected_text, summary = correct_and_summarize(
