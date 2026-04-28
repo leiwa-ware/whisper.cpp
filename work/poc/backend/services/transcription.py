@@ -5,6 +5,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from config import WHISPER_CLI, WHISPER_FINAL_MODEL, WHISPER_VAD_MODEL
+from services.noise_reduction import reduce_noise
 
 # whisper の --prompt は「音声の直前に来る自然なテキスト」として設計されている。
 # コンマ区切りの単語リストをそのまま渡すとデコーダーが混乱し精度が大幅に低下する。
