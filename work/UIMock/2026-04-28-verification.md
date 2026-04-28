@@ -436,19 +436,25 @@ print(r.text[:200])
 # Kotoba vs medium の CER 比較
 # 同一テスト音声に対して両モデルで転写し、正解テキストとの文字誤り率を比較
 
-# medium モデルで転写
-WHISPER_FINAL_MODEL=models/ggml-medium.bin python -c "
-import logging
-logging.basicConfig(level=logging.WARNING)
+# ※ PowerShell では環境変数設定が異なる。bash (Git Bash) で実行すること。
+# 環境変数を汚染しない bash インラインで設定）
+# ※ テスト音声: part_0.wav（日本語会議音声）を使用
+
+
+# medium モデルで転写（絶対パス指定）
+WHISPER_FINAL_MODEL="C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-medium.bin" python -c "
+import logging; logging.basicConfig(level=logging.WARNING)
 from services.transcription import transcribe_audio
 r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav', language='ja')
-print('OK:', r.text[:100])
+open('medium_output.txt', 'w', encoding='utf-8').write(r.text)
+print('medium:', r.text[:100])
 "
 
-# Kotoba モデルで転写
-WHISPER_FINAL_MODEL=models/ggml-kotoba-v2.2-q5_k.bin python -c "
+# Kotoba モデルで転写（絶対パス指定）
+WHISPER_FINAL_MODEL="C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin" python -c "
+import logging; logging.basicConfig(level=logging.WARNING)
 from services.transcription import transcribe_audio
-r = transcribe_audio('/path/to/test_audio.wav', language='ja')
+r = transcribe_audio('C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav', language='ja')
 open('kotoba_output.txt', 'w', encoding='utf-8').write(r.text)
 print('kotoba:', r.text[:100])
 "
