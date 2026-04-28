@@ -45,6 +45,9 @@ def transcribe_audio(
     """whisper-cli を subprocess で呼び出し転写結果を返す。"""
     with tempfile.TemporaryDirectory() as tmpdir:
         wav_path = _to_16k_wav(audio_path, tmpdir)
+        # ノイズ除去（NOISE_REDUCTION_LEVEL=none で無効化）
+        clean_path = str(Path(tmpdir) / "audio_clean.wav")
+        wav_path = reduce_noise(wav_path, clean_path)
         out_base = str(Path(tmpdir) / "result")
 
         cmd = [
