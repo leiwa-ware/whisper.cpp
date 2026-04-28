@@ -396,7 +396,7 @@ print('medium:', r.text[:100])
 "
 
 # Kotoba モデルで転写
-WHISPER_FINAL_MODEL=models/ggml-kotoba-whisper-v2.2-q5km.bin python -c "
+WHISPER_FINAL_MODEL=models/ggml-kotoba-v2.2-q5_k.bin python -c "
 from services.transcription import transcribe_audio
 r = transcribe_audio('/path/to/test_audio.wav', language='ja')
 open('kotoba_output.txt', 'w', encoding='utf-8').write(r.text)
