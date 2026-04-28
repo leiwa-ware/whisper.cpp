@@ -67,10 +67,17 @@ def transcribe_audio(
             cmd += ["--prompt", initial_prompt]
 
         # VAD は環境変数 WHISPER_VAD_ENABLED=1 で明示有効化した場合のみ使用。
-        # デフォルト無効: Silero-VAD のデフォルト閾値が短発話を過剰にカットし
-        # 幻覚フレーズを誘発するため、--no-speech-thold による抑制を優先する。
+        # デフォルト無効: Silero-VAD のデフォルト閾値 (0.5) が日本語短発話を
+        # 過剰にカットするため、--no-speech-thold による抑制を優先する。
+        # 有効化する場合は保守的な閾値 (0.35) を使用して過剰カットを防ぐ。
         if WHISPER_VAD_MODEL and os.environ.get("WHISPER_VAD_ENABLED") == "1":
-            cmd += ["--vad", "--vad-model", WHISPER_VAD_MODEL]
+            cmd += [
+                "--vad",
+                "--vad-model", WHISPER_VAD_MODEL,
+                "--vad-threshold", "0.35",        # default 0.5 は日本語短発話を過剰カット
+                "--vad-speech-pad-ms", "400",      # 語頭子音の切り落とし防止
+                "--vad-min-speech-duration-ms", "200",
+            ]
 
         proc = subprocess.run(
             cmd, capture_output=True, text=True,
