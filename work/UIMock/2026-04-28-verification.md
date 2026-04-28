@@ -493,7 +493,9 @@ print('PASS' if improvement >= 20 else 'FAIL: 改善率が 20% 未満')
 
 ### 起動
 
-```bash
+**PowerShell から実行する場合**（推奨）:
+
+```powershell
 cd C:\work\30.Projects\102.AI_Projects\whisper.cpp\whisper.cpp\work\poc\backend
 .\venv\Scripts\activate
 
@@ -501,16 +503,31 @@ cd C:\work\30.Projects\102.AI_Projects\whisper.cpp\whisper.cpp\work\poc\backend
 uvicorn main:app --port 8080 --reload
 
 # ノイズ除去を aggressive にして起動（倉庫環境）
+$env:NOISE_REDUCTION_LEVEL = "aggressive"
+uvicorn main:app --port 8080 --reload
+
+# Kotoba モデルを明示指定して起動（絶対パス必須）
+$env:WHISPER_FINAL_MODEL = "C:\work\30.Projects\102.AI_Projects\whisper.cpp\whisper.cpp\models\ggml-kotoba-v2.2-q5_k.bin"
+uvicorn main:app --port 8080 --reload
+
+# 環境変数を元に戻す（起動後に必ず実行）
+Remove-Item Env:NOISE_REDUCTION_LEVEL -ErrorAction SilentlyContinue
+Remove-Item Env:WHISPER_FINAL_MODEL -ErrorAction SilentlyContinue
+```
+
+**Git Bash から実行する場合**:
+
+```bash
+cd /c/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/work/poc/backend
+source venv/Scripts/activate
+
+# デフォルト
+uvicorn main:app --port 8080 --reload
+
+# 環境変数を指定して起動（インライン設定、セッションを汚染しない）
 NOISE_REDUCTION_LEVEL=aggressive uvicorn main:app --port 8080 --reload
 
-# Kotoba モデルを明示指定して起動
-WHISPER_FINAL_MODEL=../../models/ggml-kotoba-whisper-v2.2-q5km.bin \
-  uvicorn main:app --port 8080 --reload
-
-# すべてのオプションを組み合わせ
-NOISE_REDUCTION_LEVEL=moderate \
-  WHISPER_VAD_ENABLED=1 \
-  LOCAL_LLM_MODEL=qwen3:1.7b \
+WHISPER_FINAL_MODEL="C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin" \
   uvicorn main:app --port 8080 --reload
 ```
 
