@@ -6,6 +6,9 @@ _log = logging.getLogger(__name__)
 
 NOISE_REDUCTION_LEVEL = os.environ.get("NOISE_REDUCTION_LEVEL", "moderate")
 
+# Track which filters have already been reported as unsupported so we only log once.
+_reported_unsupported: set[str] = set()
+
 # レベル別フィルター候補（先頭から順に試す。失敗したら次へ）
 # arnndn が利用できない ffmpeg ビルドのためにバンドパスフィルターをフォールバックとして用意。
 _FILTER_CANDIDATES: dict[str, list[str]] = {
