@@ -120,8 +120,9 @@ def correct_and_summarize(
             messages=[{"role": "user", "content": prompt}],
             options={
                 "temperature": 0.1,
-                "num_ctx": 2048,      # KV キャッシュを半減（448MB → 224MB）
-                "num_predict": 512,   # 出力トークン上限（JSON 出力に十分）
+                "num_ctx": 2048,      # KV キャッシュ削減（40960→2048、448MB→22MB）
+                "num_predict": 512,   # 出力トークン上限（JSON に十分）
+                "think": False,       # qwen3 の thinking モード無効（速度優先）
             },
         )
         raw = response["message"]["content"].strip()
