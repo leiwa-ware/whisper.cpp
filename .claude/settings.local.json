@@ -58,7 +58,9 @@
       "Bash(time c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/build/bin/Release/whisper-cli.exe -m c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin -f /c/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3 -l ja --no-prints)",
       "Bash(c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/build/bin/Release/whisper-cli.exe -m c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin -f C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav -l ja)",
       "Bash(awk '{print $5, $9}')",
-      "Bash(awk '{printf \"%-10s  %s\\\\n\", $5, $9}')"
+      "Bash(awk '{printf \"%-10s  %s\\\\n\", $5, $9}')",
+      "Bash(wc -l c:\\\\\\\\work\\\\\\\\30.Projects\\\\\\\\102.AI_Projects\\\\\\\\whisper.cpp\\\\\\\\whisper.cpp\\\\\\\\work\\\\\\\\UIMock\\\\\\\\meeting.html)",
+      "Bash(\"/c/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/work/poc/backend/venv/Scripts/pip.exe\" list *)"
     ]
   }
 }
