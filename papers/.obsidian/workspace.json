@@ -11,10 +11,12 @@
             "id": "fd0bb2f508571b41",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "新标签页"
+              "type": "pdf",
+              "state": {
+                "file": "2207.03852v1.pdf"
+              },
+              "icon": "lucide-file-text",
+              "title": "2207.03852v1"
             }
           }
         ]
@@ -90,17 +92,17 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "ようこそ.md",
+                "file": "2207.03852v1.pdf",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
                 "showSearch": false,
                 "searchQuery": "",
                 "backlinkCollapsed": false,
-                "unlinkedCollapsed": true
+                "unlinkedCollapsed": false
               },
               "icon": "links-coming-in",
-              "title": "ようこそへのバックリンク"
+              "title": "2207.03852v1 的反向链接列表"
             }
           },
           {
@@ -165,8 +167,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {

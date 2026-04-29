@@ -48,8 +48,10 @@ async def _transcribe_chunk_bytes(
 
         url = f"http://127.0.0.1:{WHISPER_SERVER_PORT}/inference"
         form: dict = {"language": "ja", "response_format": "json"}
-        if initial_prompt:
-            form["initial_prompt"] = initial_prompt
+        # whisper-server は WHISPER_MODEL でロード済み。kotoba 系なら 24文字以下に短縮。
+        safe_prompt = safe_prompt_for_model(initial_prompt, WHISPER_MODEL)
+        if safe_prompt:
+            form["initial_prompt"] = safe_prompt
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
