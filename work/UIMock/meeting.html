@@ -542,9 +542,15 @@ async function startRec() {
   pendingChunks = [];
   realtimeAvailable = true;
   isChunkProcessing = false;
-  realtimeContextBuffer = ''; // コンテキストバッファをリセット
+  realtimeContextBuffer = ''; // POST フォールバック用バッファをリセット
+  useWebSocket = (typeof WebSocket !== 'undefined');
+  wsReady = false;
+  wsClosing = false;
   document.getElementById('live-box').innerHTML = '<span style="color:#475569;font-size:12px;">認識中...</span><span class="cursor-blink" id="cursor"></span>';
   gotoStep(1);
+
+  // WebSocket 主経路を開く（POST はフォールバック）
+  openTranscriptWebSocket();
 
   timerTick = setInterval(() => {
     elapsed++;
