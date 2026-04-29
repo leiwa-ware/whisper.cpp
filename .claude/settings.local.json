@@ -56,7 +56,8 @@
       "Bash(curl -v -X POST http://localhost:8080/api/recordings -F audio=@samples/jfk.wav -F meeting_type=visit -F client_name=田中倉庫 -F 'owner_name=山田 健一' -F industry=logistics)",
       "Bash(ffprobe -v quiet -show_entries format=duration,size,bit_rate -of csv=p=0 \"/c/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3\")",
       "Bash(time c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/build/bin/Release/whisper-cli.exe -m c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin -f /c/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/meeting.mp3 -l ja --no-prints)",
-      "Bash(c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/build/bin/Release/whisper-cli.exe -m c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin -f C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav -l ja)"
+      "Bash(c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/build/bin/Release/whisper-cli.exe -m c:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/models/ggml-kotoba-v2.2-q5_k.bin -f C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav -l ja)",
+      "Bash(awk '{print $5, $9}')"
     ]
   }
 }

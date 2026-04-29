@@ -548,9 +548,10 @@ async function sendRealtimeChunk() {
     if (data.text) {
       // 認識結果をコンテキストバッファに追記（末尾 MAX 文字を保持）
       realtimeContextBuffer = (realtimeContextBuffer + data.text).slice(-REALTIME_MAX_CONTEXT_CHARS);
+      console.log('[POC] appendToLiveBox:', JSON.stringify(data.text));
       appendToLiveBox(data.text);
     } else {
-      console.log('[POC] empty text returned (silence or no speech detected)');
+      console.log('[POC] empty text returned (silence or no speech detected) — available:', data.available);
     }
   } catch (e) {
     console.warn('[POC] transcribe-chunk fetch error:', e.message);
