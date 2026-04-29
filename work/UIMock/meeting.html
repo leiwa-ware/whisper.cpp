@@ -394,6 +394,12 @@
 // FastAPI (port 8000) から配信されていれば相対パス、
 // VS Code Live Preview など別ポートなら絶対 URL にフォールバック。
 window.API_BASE = location.port === '8080' ? '/api' : 'http://localhost:8080/api';
+// WebSocket origin: 同じホスト/ポートを使う（API_BASE の /api 部分から逆算）
+window.WS_BASE = (function () {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = (API_BASE.startsWith('http') ? new URL(API_BASE).host : location.host);
+  return `${proto}//${host}/api/ws/transcribe`;
+})();
 
 // ─── State ───────────────────────────────────────────────
 let mtype = 'opp';
@@ -406,9 +412,15 @@ let initChunk = null;      // WebM/OGG コンテナヘッダ（最初のチャ�
 let pendingChunks = [];    // 次のリアルタイム送信バッチ用チャンク
 let chunkInterval = null;  // 定期送信タイマー
 let realtimeAvailable = true; // whisper-server が利用可能かどうか
-let isChunkProcessing = false; // 並行リクエスト防止フラグ
-let realtimeContextBuffer = ''; // 直近チャンクの認識テキスト（次チャンクの initial_prompt に使用）
+let isChunkProcessing = false; // 並行リクエスト防止フラグ（POST フォールバック用）
+let realtimeContextBuffer = ''; // 直近チャンクの認識テキスト（POST フォールバック時の initial_prompt 用）
 const REALTIME_MAX_CONTEXT_CHARS = 200; // whisper --prompt の実効上限に合わせた最大文字数
+
+// WebSocket 主経路（partial/final 二段出力）。失敗時は従来 POST にフォールバック。
+let ws = null;
+let wsReady = false;            // サーバが {"type":"ready"} を返したか
+let wsClosing = false;          // 明示的 close 中かどうか
+let useWebSocket = true;        // 環境変数的フラグ：false なら強制 POST
 
 console.log('[POC] meeting.html loaded. API_BASE =', API_BASE, '| origin =', location.origin);
 
