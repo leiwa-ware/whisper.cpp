@@ -494,12 +494,25 @@ async function startRec() {
 }
 
 async function sendRealtimeChunk() {
-  if (!realtimeAvailable || !initChunk || pendingChunks.length === 0) return;
+  // ─── 早期リターン：原因をログに出す ───
+  if (!realtimeAvailable) {
+    console.warn('[POC] sendRealtimeChunk SKIP: realtimeAvailable=false (whisper-server unavailable or previous 500)');
+    return;
+  }
+  if (!initChunk) {
+    console.warn('[POC] sendRealtimeChunk SKIP: initChunk not yet captured (recording started <1s ago?)');
+    return;
+  }
+  if (pendingChunks.length === 0) {
+    console.log('[POC] sendRealtimeChunk SKIP: pendingChunks empty (no new audio since last send)');
+    return;
+  }
   if (isChunkProcessing) {
     // 前のリクエストがまだ処理中 → チャンクはバッファに蓄積されたまま次回に回す
     console.log('[POC] previous chunk still processing, skipping interval');
     return;
   }
+  console.log('[POC] sendRealtimeChunk: state OK → sending', pendingChunks.length, 'pending chunks, realtimeAvailable =', realtimeAvailable);
 
   const batch = pendingChunks.splice(0);  // 取り出してクリア
   const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
