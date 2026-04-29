@@ -88,7 +88,7 @@ def _parse_llm_json(raw: str, fallback_transcript: str) -> dict:
         pass
 
     # 全失敗: 文字起こし本文は保持、構造化は空で返す
-    _log.error("All JSON parse attempts failed. Returning raw transcript as corrected.")
+    _log.error("All JSON parse attempts failed. LLM output (first 400 chars): %s", raw[:400])
     return {
         "corrected_transcript": fallback_transcript,
         "topics": [],
