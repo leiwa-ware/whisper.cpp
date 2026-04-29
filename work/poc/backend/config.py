@@ -24,10 +24,9 @@ WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8300"))
 #   curl -L -o models/ggml-kotoba-v2.2-q5_k.bin \
 #     https://huggingface.co/Pomni/kotoba-whisper-v2.2-ggml-allquants/resolve/main/ggml-kotoba-v2.2-q5_k.bin
 _kotoba_candidates = sorted(_glob.glob(str(REPO_ROOT / "models/ggml-kotoba*.bin")))
-# リアルタイム用は q8 優先（速度重視）、最終転写用は q5_k 優先（精度重視）
+# 最終転写用（精度優先）: q5_k → q8_0 の順
 _kotoba_q8 = [p for p in _kotoba_candidates if "q8" in p]
 _kotoba_q5 = [p for p in _kotoba_candidates if "q5_k" in p or "q5k" in p]
-_kotoba_fast     = _kotoba_q8[-1] if _kotoba_q8 else (_kotoba_q5[-1] if _kotoba_q5 else (_kotoba_candidates[-1] if _kotoba_candidates else ""))
 _kotoba_accurate = _kotoba_q5[-1] if _kotoba_q5 else (_kotoba_q8[-1] if _kotoba_q8 else (_kotoba_candidates[-1] if _kotoba_candidates else ""))
 
 _medium = REPO_ROOT / "models/ggml-medium.bin"
