@@ -276,6 +276,7 @@
 | **追6** | **チャンク間で initial_prompt 継承を忘れる** | 固有名詞の連続性が壊れる |
 | **追7** | **温度フォールバック有効のままリアルタイム** | partial がぐらつき UX 劣化（temperature=0 固定） |
 | **追8** | **発熱対策なしで 30分連続録音** | サーマル降下で RTF 2.0+ → 文字起こし停止 |
+| **追9** | **kotoba モデルに 30文字以上の `--prompt` を渡す** | 出力が冒頭数文字（例:「先週」）まで縮退して崩壊。✅ [services/prompt_safety.py](../poc/backend/services/prompt_safety.py) で 24文字以下に自動短縮するガードを実装済み（[2026-04-29-bench-results.md §2](2026-04-29-bench-results.md) 参照）|
 
 ---
 
