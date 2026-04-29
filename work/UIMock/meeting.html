@@ -589,10 +589,6 @@ async function startRec() {
 
 async function sendRealtimeChunk() {
   // ─── 早期リターン：原因をログに出す ───
-  if (!realtimeAvailable) {
-    console.warn('[POC] sendRealtimeChunk SKIP: realtimeAvailable=false (whisper-server unavailable or previous 500)');
-    return;
-  }
   if (!initChunk) {
     console.warn('[POC] sendRealtimeChunk SKIP: initChunk not yet captured (recording started <1s ago?)');
     return;
@@ -601,15 +597,10 @@ async function sendRealtimeChunk() {
     console.log('[POC] sendRealtimeChunk SKIP: pendingChunks empty (no new audio since last send)');
     return;
   }
-  if (isChunkProcessing) {
-    // 前のリクエストがまだ処理中 → チャンクはバッファに蓄積されたまま次回に回す
-    console.log('[POC] previous chunk still processing, skipping interval');
-    return;
-  }
-  console.log('[POC] sendRealtimeChunk: state OK → sending', pendingChunks.length, 'pending chunks, realtimeAvailable =', realtimeAvailable);
 
-  const all = pendingChunks.splice(0);  // 取り出してクリア
-  const MAX_REALTIME_CHUNKS = 10;       // 最大10チャンク(≈10秒)に制限
+  // ─── batch 構築（WS / POST 共通）───
+  const all = pendingChunks.splice(0);
+  const MAX_REALTIME_CHUNKS = 10;
   const batch = all.length > MAX_REALTIME_CHUNKS ? all.slice(-MAX_REALTIME_CHUNKS) : all;
   if (all.length > MAX_REALTIME_CHUNKS) {
     console.warn('[POC] chunk cap: kept last', MAX_REALTIME_CHUNKS, 'of', all.length,
@@ -618,15 +609,35 @@ async function sendRealtimeChunk() {
   const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
   const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
   const blob = new Blob([initChunk, ...batch], { type: mime || 'audio/webm' });
-  const t0 = Date.now();
   console.log('[POC] realtime chunk send: size =', blob.size, 'bytes, batched chunks =', batch.length);
 
+  // ─── 主経路: WebSocket（partial/final 二段出力）───
+  if (useWebSocket && wsReady && ws && ws.readyState === WebSocket.OPEN) {
+    try {
+      ws.send(blob);
+      // partial/final はサーバから ws.onmessage で push されるので、ここでは何も await しない
+      return;
+    } catch (e) {
+      console.warn('[POC] WS send failed → POST fallback this turn:', e.message);
+      // 落ちた batch をフォールバック経路に送る
+    }
+  }
+
+  // ─── フォールバック: POST /transcribe-chunk ───
+  if (!realtimeAvailable) {
+    console.warn('[POC] sendRealtimeChunk SKIP: realtimeAvailable=false');
+    return;
+  }
+  if (isChunkProcessing) {
+    console.log('[POC] previous chunk still processing, skipping interval');
+    return;
+  }
+
+  const t0 = Date.now();
   isChunkProcessing = true;
   try {
     const form = new FormData();
     form.append('audio', blob, 'chunk.' + ext);
-    // 固有名詞 + 直近チャンクのコンテキストを initial_prompt として付与
-    // → チャンク境界での固有名詞再認識失敗を抑制
     const prompt = [
       document.getElementById('inp-client').value,
       document.getElementById('inp-owner').value,
@@ -638,23 +649,18 @@ async function sendRealtimeChunk() {
     const elapsed_ms = Date.now() - t0;
     console.log('[POC] transcribe-chunk response:', res.status, `(${elapsed_ms}ms)`);
     if (elapsed_ms > 8000) {
-      console.warn('[POC] ⚠️ realtime latency', elapsed_ms + 'ms — model too slow for realtime. Restart server: WHISPER_MODEL を ggml-base.bin に変更してください');
+      console.warn('[POC] ⚠️ realtime latency', elapsed_ms + 'ms — model too slow for realtime');
     }
     if (!res.ok) { console.warn('[POC] transcribe-chunk error body:', await res.text()); return; }
     const data = await res.json();
-    console.log('[POC] transcribe-chunk result:', data);
     if (!data.available) {
       realtimeAvailable = false;
       console.warn('[POC] whisper-server unavailable, realtime disabled');
       return;
     }
     if (data.text) {
-      // 認識結果をコンテキストバッファに追記（末尾 MAX 文字を保持）
       realtimeContextBuffer = (realtimeContextBuffer + data.text).slice(-REALTIME_MAX_CONTEXT_CHARS);
-      console.log('[POC] appendToLiveBox:', JSON.stringify(data.text));
       appendToLiveBox(data.text);
-    } else {
-      console.log('[POC] empty text returned (silence or no speech detected) — available:', data.available);
     }
   } catch (e) {
     console.warn('[POC] transcribe-chunk fetch error:', e.message);
