@@ -64,7 +64,13 @@
       "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py -x --no-header)",
       "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py -v --no-header)",
       "Bash(./venv/Scripts/pytest.exe tests/test_streaming_websocket.py -v --no-header)",
-      "Bash(./venv/Scripts/pytest.exe --no-header)"
+      "Bash(./venv/Scripts/pytest.exe --no-header)",
+      "Bash(./venv/Scripts/python.exe -m uvicorn main:app --port 8080 --host 127.0.0.1)",
+      "Bash(curl -s --max-time 1 http://127.0.0.1:8080/api/health)",
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "Bash(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav\")",
+      "Bash(./work/poc/backend/venv/Scripts/python.exe -c ' *)",
+      "Bash(ffmpeg -y -i C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav -ar 16000 -ac 1 -c:a pcm_s16le C:/Users/sunyu/AppData/Local/Temp/part_0_16k.wav)"
     ]
   }
 }

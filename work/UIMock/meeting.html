@@ -715,6 +715,7 @@ async function stopRec() {
   clearInterval(timerTick);
   clearInterval(chunkInterval);  // リアルタイム送信タイマーを停止
   chunkInterval = null;
+  closeTranscriptWebSocket();    // WS を graceful close（ペンディング partial の force_finalize を促す）
   document.querySelectorAll('.wbar').forEach(b => b.classList.add('paused'));
   document.getElementById('rec-blink').style.animation = 'none';
   document.getElementById('rec-blink').style.background = '#64748b';
