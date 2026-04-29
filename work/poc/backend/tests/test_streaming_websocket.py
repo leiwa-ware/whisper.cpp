@@ -176,6 +176,41 @@ def test_websocket_chunk_inheritance_passes_prior_text_as_prompt(client, monkeyp
         assert "昨日の在庫確認" in captured_prompts[1]  # second: inherits prior partial
 
 
+def test_websocket_partial_event_carries_delta(client):
+    """Each partial frame must include the just-added chunk text in `delta`."""
+    client._script.extend(["今日のテーマは", "売上の確認"])
+    with client.websocket_connect("/api/ws/transcribe") as ws:
+        assert _recv_event(ws)["type"] == "ready"
+
+        ws.send_bytes(b"<c1>")
+        e1 = _recv_event(ws)
+        assert e1["type"] == "partial"
+        assert e1["delta"] == "今日のテーマは"
+        assert e1["text"] == "今日のテーマは"
+
+        ws.send_bytes(b"<c2>")
+        e2 = _recv_event(ws)
+        assert e2["type"] == "partial"
+        assert e2["delta"] == "売上の確認"
+        assert e2["text"] == "今日のテーマは 売上の確認"
+
+
+def test_websocket_final_event_carries_delta(client):
+    """Final frame's delta is the chunk that triggered the finalize."""
+    client._script.extend(["途中まで", "完結しました"])
+    with client.websocket_connect("/api/ws/transcribe") as ws:
+        assert _recv_event(ws)["type"] == "ready"
+        ws.send_bytes(b"<c1>")
+        _recv_event(ws)  # partial
+
+        ws.send_bytes(b"<c2>")  # ました → final
+        ev = _recv_event(ws)
+        assert ev["type"] == "final"
+        assert ev["delta"] == "完結しました"
+        assert "途中まで" in ev["text"]
+        assert "完結しました" in ev["text"]
+
+
 def test_websocket_whisper_unavailable_emits_error(client, monkeypatch):
     """When whisper-server returns available=False, surface as error event."""
     from api import realtime as realtime_mod
