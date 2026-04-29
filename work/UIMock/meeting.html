@@ -583,17 +583,45 @@ async function sendRealtimeChunk() {
   }
 }
 
-function appendToLiveBox(text) {
+function _clearLivePlaceholder() {
   const box = document.getElementById('live-box');
-  // 「認識中...」プレースホルダーを除去（初回のみ）
   const placeholder = box.querySelector('span[style]');
   if (placeholder) placeholder.remove();
+}
+
+// partial: 「まだ確定していない」発話。box 末尾に1つだけ存在し、新着のたびに置換される。
+function setPartial(text) {
+  const box = document.getElementById('live-box');
+  _clearLivePlaceholder();
+  let p = box.querySelector('p.partial');
+  if (!p) {
+    p = document.createElement('p');
+    p.className = 'partial';
+    const cursor = document.getElementById('cursor');
+    box.insertBefore(p, cursor);
+  }
+  p.textContent = text;
+  box.scrollTop = box.scrollHeight;
+}
+
+// final: 確定した発話。partial 要素は除去し、final として箱に追記する。
+function commitFinal(text) {
+  const box = document.getElementById('live-box');
+  _clearLivePlaceholder();
+  const partial = box.querySelector('p.partial');
+  if (partial) partial.remove();
 
   const p = document.createElement('p');
+  p.className = 'final';
   p.textContent = text;
   const cursor = document.getElementById('cursor');
   box.insertBefore(p, cursor);
   box.scrollTop = box.scrollHeight;
+}
+
+// 後方互換: POST フォールバック経路はこちらを使う（partial/final 区別なし）
+function appendToLiveBox(text) {
+  commitFinal(text);
 }
 
 async function stopRec() {
