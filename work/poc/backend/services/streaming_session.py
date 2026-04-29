@@ -88,40 +88,43 @@ class StreamingSession:
     def add_chunk_text(self, text: str) -> dict:
         """Add a transcribed chunk and return either a partial or final event.
 
-        Returns:
-            {"type": "partial", "text": <accumulated>} OR
-            {"type": "final",   "text": <full sentence>}
+        Event shape:
+            {"type": "partial"|"final", "text": <full>, "delta": <added by this chunk>}
+
+        delta is the just-added portion (after stripping). For empty/whitespace
+        chunks, delta is "" and text is unchanged. UI clients can append delta
+        as a new line for chunk-level visual feedback.
 
         Empty / whitespace-only text is silently ignored (returns the
         current partial state without modification).
         """
-        text = text.strip()
-        if text:
+        delta = text.strip()
+        if delta:
             now = self._now()
             if self._partial_started_at is None:
                 self._partial_started_at = now
-            self.partial_text = (self.partial_text + " " + text).strip() if self.partial_text else text
+            self.partial_text = (self.partial_text + " " + delta).strip() if self.partial_text else delta
 
             elapsed = now - self._partial_started_at
             if is_sentence_end(self.partial_text) or elapsed >= self.max_partial_duration_s:
-                return self._do_finalize()
+                return self._do_finalize(delta)
 
-        return {"type": "partial", "text": self.partial_text}
+        return {"type": "partial", "text": self.partial_text, "delta": delta}
 
     def force_finalize(self) -> Optional[dict]:
         """Finalize whatever is pending (called on session close).
 
-        Returns the final event, or None if there was nothing pending.
+        Returns the final event with delta="" (no new chunk was added),
+        or None if there was nothing pending.
         """
         if not self.partial_text:
             return None
-        return self._do_finalize()
+        return self._do_finalize(delta="")
 
-    def _do_finalize(self) -> dict:
+    def _do_finalize(self, delta: str) -> dict:
         text = self.partial_text
-        # Append to confirmed text and truncate to context window
         merged = (self.confirmed_text + " " + text).strip() if self.confirmed_text else text
         self.confirmed_text = merged[-self.context_chars:]
         self.partial_text = ""
         self._partial_started_at = None
-        return {"type": "final", "text": text}
+        return {"type": "final", "text": text, "delta": delta}
