@@ -33,7 +33,8 @@ _medium = REPO_ROOT / "models/ggml-medium.bin"
 
 # リアルタイム転写用（速度優先）: whisper-server に渡すモデル。
 # CPU 環境では kotoba q8_0/q5_k は ~6x RTF（5秒音声に25秒）のためリアルタイム不可。
-# base (148MB) は CPU でも ~0.3x RTF（5秒音声に約1.5秒）で実用的なプレビューが可能。
+# small (488MB, 244M params): ~1.6x RTF（5秒音声に約8秒）、日本語 CER ~15%、内容確認に適する。
+# base  (148MB,  74M params): ~0.5x RTF（5秒音声に約2秒）、日本語 CER ~25%、遅延最小。
 # GPU (CUDA/Metal) 環境なら: WHISPER_MODEL=.../ggml-kotoba-v2.2-q8_0.bin を明示指定
 WHISPER_MODEL = os.environ.get(
     "WHISPER_MODEL",
