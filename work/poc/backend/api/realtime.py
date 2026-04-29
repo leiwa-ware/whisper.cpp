@@ -18,7 +18,8 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 
-from config import WHISPER_SERVER_PORT
+from config import WHISPER_MODEL, WHISPER_SERVER_PORT
+from services.prompt_safety import safe_prompt_for_model
 from services.streaming_session import StreamingSession
 from services.transcription import _to_16k_wav
 
