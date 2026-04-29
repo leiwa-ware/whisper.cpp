@@ -72,7 +72,8 @@
       "Bash(./work/poc/backend/venv/Scripts/python.exe -c ' *)",
       "Bash(ffmpeg -y -i C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav -ar 16000 -ac 1 -c:a pcm_s16le C:/Users/sunyu/AppData/Local/Temp/part_0_16k.wav)",
       "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_models.py\")",
-      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_with_prompt.py\")"
+      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_with_prompt.py\")",
+      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_kotoba_small_prompt.py\")"
     ]
   }
 }
