@@ -543,6 +543,9 @@ async function sendRealtimeChunk() {
     const res = await fetch(`${API_BASE}/transcribe-chunk`, { method: 'POST', body: form });
     const elapsed_ms = Date.now() - t0;
     console.log('[POC] transcribe-chunk response:', res.status, `(${elapsed_ms}ms)`);
+    if (elapsed_ms > 8000) {
+      console.warn('[POC] ⚠️ realtime latency', elapsed_ms + 'ms — model too slow for realtime. Restart server: WHISPER_MODEL を ggml-base.bin に変更してください');
+    }
     if (!res.ok) { console.warn('[POC] transcribe-chunk error body:', await res.text()); return; }
     const data = await res.json();
     console.log('[POC] transcribe-chunk result:', data);
