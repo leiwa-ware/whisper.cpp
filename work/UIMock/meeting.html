@@ -147,7 +147,15 @@
   }
   .transcript-live p { margin:0 0 6px; }
   .transcript-live p.final { color:#cbd5e1; }
-  .transcript-live p.partial { color:#64748b; font-style:italic; opacity:.85; }
+  /* partial group: 確定前の累積。border で final 領域と視覚分離 */
+  .transcript-live .partial-group {
+    border-left:2px solid #1e3a5f; padding:2px 0 2px 8px; margin:0 0 6px -8px;
+  }
+  .transcript-live .partial-group p.partial {
+    color:#64748b; font-style:italic; opacity:.7; margin:0 0 3px;
+  }
+  /* 最新 chunk の行は明るくしてタイプライター効果 */
+  .transcript-live .partial-group p.partial:last-child { color:#94a3b8; opacity:1; }
   .spk { color:#a78bfa; font-weight:600; }
   .cursor-blink {
     display:inline-block; width:2px; height:13px; background:#a78bfa;
