@@ -78,7 +78,8 @@
       "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py tests/test_streaming_websocket.py --no-header -q)",
       "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py tests/test_streaming_websocket.py tests/test_health.py --no-header -q)",
       "Bash(./venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/e2e_delta_check.py\")",
-      "Bash(./venv/Scripts/pytest.exe --no-header --ignore=tests/test_transcription.py -q)"
+      "Bash(./venv/Scripts/pytest.exe --no-header --ignore=tests/test_transcription.py -q)",
+      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_kotoba_threshold.py\")"
     ]
   }
 }
