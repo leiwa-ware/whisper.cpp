@@ -85,9 +85,12 @@ hf_hub_download(
 | ファイル名 | サイズ | 用途 |
 |---|---|---|
 | `ggml-kotoba-v2.2-q5_k.bin` | 538MB | **最終転写（推奨）** |
-| `ggml-kotoba-v2.2-q8_0.bin` | 818MB | **リアルタイム（推奨）** |
+| `ggml-kotoba-v2.2-q8_0.bin` | 818MB | **リアルタイム（GPU 環境のみ推奨）** ※CPU では 25秒/5秒音声で実用不可 |
 | `ggml-kotoba-v2.2-q4_k.bin` | 444MB | メモリ節約優先 |
 | `ggml-kotoba-v2.2-f16.bin` | 1.52GB | 最高精度（RAM に余裕がある場合） |
+
+> **CPU 環境（GPU なし）のリアルタイム推奨**: `ggml-small.bin` (488MB, 244M params, ~8秒/5秒音声)
+> kotoba q8_0 は medium アーキテクチャ (769M params) のため CPU では遅すぎる。
 
 ダウンロード後の設定確認:
 ```bash
