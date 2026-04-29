@@ -683,28 +683,59 @@ function _clearLivePlaceholder() {
   if (placeholder) placeholder.remove();
 }
 
-// partial: 「まだ確定していない」発話。box 末尾に1つだけ存在し、新着のたびに置換される。
-function setPartial(text) {
+// 文字数閾値超過時、句読点・空白で自然に分割。日本語の連続発話で1行が間延びするのを防ぐ。
+const PARTIAL_LINE_THRESHOLD = 40;
+function _splitForPartialDisplay(text, threshold) {
+  if (!text || text.length <= threshold) return [text || ''];
+  const lines = [];
+  let buf = '';
+  for (const ch of text) {
+    buf += ch;
+    if (buf.length >= threshold && /[、。！？\s]/.test(ch)) {
+      lines.push(buf); buf = '';
+    }
+  }
+  if (buf) lines.push(buf);
+  return lines;
+}
+
+// partial-group: 確定前のチャンク行を保持するコンテナ。最新行が明るく表示される。
+function _ensurePartialGroup() {
+  const box = document.getElementById('live-box');
+  let g = box.querySelector('.partial-group');
+  if (!g) {
+    g = document.createElement('div');
+    g.className = 'partial-group';
+    const cursor = document.getElementById('cursor');
+    box.insertBefore(g, cursor);
+  }
+  return g;
+}
+
+// partial: チャンクごとに 1 行（または閾値超で複数行）追加する。delta が空なら何もしない。
+function appendPartial(deltaText) {
+  if (!deltaText) return;
   const box = document.getElementById('live-box');
   _clearLivePlaceholder();
-  let p = box.querySelector('p.partial');
-  if (!p) {
-    p = document.createElement('p');
+  const group = _ensurePartialGroup();
+  for (const line of _splitForPartialDisplay(deltaText, PARTIAL_LINE_THRESHOLD)) {
+    if (!line) continue;
+    const p = document.createElement('p');
     p.className = 'partial';
-    const cursor = document.getElementById('cursor');
-    box.insertBefore(p, cursor);
+    p.textContent = line;
+    group.appendChild(p);
   }
-  p.textContent = text;
   box.scrollTop = box.scrollHeight;
 }
 
-// final: 確定した発話。partial 要素は除去し、final として箱に追記する。
+// final: partial-group をまるごと除去し、確定文として 1 行を追記。
 function commitFinal(text) {
   const box = document.getElementById('live-box');
   _clearLivePlaceholder();
-  const partial = box.querySelector('p.partial');
-  if (partial) partial.remove();
+  const group = box.querySelector('.partial-group');
+  if (group) group.remove();
 
+  if (!text) return;  // force_finalize で text 空はあり得ないが念のため
   const p = document.createElement('p');
   p.className = 'final';
   p.textContent = text;
@@ -713,7 +744,7 @@ function commitFinal(text) {
   box.scrollTop = box.scrollHeight;
 }
 
-// 後方互換: POST フォールバック経路はこちらを使う（partial/final 区別なし）
+// 後方互換: POST フォールバック経路（partial/final 区別なし、毎回 final として確定）
 function appendToLiveBox(text) {
   commitFinal(text);
 }
