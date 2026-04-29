@@ -121,7 +121,7 @@ def correct_and_summarize(
             options={
                 "temperature": 0.1,
                 "num_ctx": 2048,      # KV キャッシュ削減（40960→2048、448MB→22MB）
-                "num_predict": 512,   # 出力トークン上限（JSON に十分）
+                "num_predict": 1024,  # 日本語 JSON: corrected_transcript + topics + actions で 700-900 トークン必要
                 "think": False,       # qwen3 の thinking モード無効（速度優先）
             },
         )
