@@ -32,10 +32,13 @@ _kotoba_accurate = _kotoba_q5[-1] if _kotoba_q5 else (_kotoba_q8[-1] if _kotoba_
 
 _medium = REPO_ROOT / "models/ggml-medium.bin"
 
-# リアルタイム転写用（速度優先）: Kotoba q8_0 → q5_k → base の順でフォールバック
+# リアルタイム転写用（速度優先）: whisper-server に渡すモデル。
+# CPU 環境では kotoba q8_0/q5_k は ~6x RTF（5秒音声に25秒）のためリアルタイム不可。
+# base (148MB) は CPU でも ~0.3x RTF（5秒音声に約1.5秒）で実用的なプレビューが可能。
+# GPU (CUDA/Metal) 環境なら: WHISPER_MODEL=.../ggml-kotoba-v2.2-q8_0.bin を明示指定
 WHISPER_MODEL = os.environ.get(
     "WHISPER_MODEL",
-    _kotoba_fast if _kotoba_fast else str(REPO_ROOT / "models/ggml-base.bin"),
+    str(REPO_ROOT / "models/ggml-base.bin"),
 )
 
 # 最終転写用（精度優先）: Kotoba q5_k → q8_0 → medium → base の順でフォールバック
