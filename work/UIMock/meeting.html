@@ -472,14 +472,19 @@ async function startRec() {
 
   mediaRecorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : {});
   mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size === 0) return;
+    if (e.data.size === 0) {
+      console.log('[POC] ondataavailable: size=0, skipping');
+      return;
+    }
     audioChunks.push(e.data);  // 停止後一括処理用
     if (!initChunk) {
       initChunk = e.data;      // 最初のチャンク = コンテナヘッダ
+      console.log('[POC] initChunk set (container header), size =', e.data.size);
     } else {
       pendingChunks.push(e.data);
+      console.log('[POC] chunk buffered → pendingChunks.length =', pendingChunks.length, ', size =', e.data.size);
     }
-    console.log('[POC] chunk received, size =', e.data.size, 'total =', audioChunks.length);
+    console.log('[POC] chunk received, size =', e.data.size, 'total audioChunks =', audioChunks.length);
   };
   mediaRecorder.start(1000);
   console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType);
