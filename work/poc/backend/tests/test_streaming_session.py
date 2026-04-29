@@ -65,6 +65,47 @@ def test_partial_emitted_when_no_sentence_end():
     assert ev["text"] == "次の議題に移ります"
 
 
+def test_partial_event_includes_delta():
+    """delta は「このチャンクで新たに追加された分」を表す。
+    UI 側がチャンク単位の追記アニメーションをするのに使う。
+    """
+    s = StreamingSession(now=lambda: 0.0)
+    ev1 = s.add_chunk_text("今日のテーマは")
+    assert ev1["delta"] == "今日のテーマは"
+
+    ev2 = s.add_chunk_text("売上の確認で")
+    assert ev2["type"] == "partial"
+    assert ev2["delta"] == "売上の確認で"
+    # full text は累積値
+    assert ev2["text"] == "今日のテーマは 売上の確認で"
+
+
+def test_final_event_includes_delta_for_consistency():
+    """final 時も delta フィールドを持つ（UI 側の処理を統一するため）。"""
+    s = StreamingSession(now=lambda: 0.0)
+    s.add_chunk_text("途中まで")
+    ev = s.add_chunk_text("これで完結します。")
+    assert ev["type"] == "final"
+    assert ev["delta"] == "これで完結します。"
+
+
+def test_force_finalize_includes_delta_as_empty_when_no_new_chunk():
+    """force_finalize は新規チャンクなしで呼ばれるので delta は空文字列。"""
+    s = StreamingSession(now=lambda: 0.0)
+    s.add_chunk_text("途中で切れた")
+    ev = s.force_finalize()
+    assert ev["type"] == "final"
+    assert ev["delta"] == ""
+
+
+def test_empty_chunk_partial_event_has_empty_delta():
+    s = StreamingSession(now=lambda: 0.0)
+    s.add_chunk_text("既存のpartial")
+    ev = s.add_chunk_text("")
+    assert ev["type"] == "partial"
+    assert ev["delta"] == ""
+
+
 def test_final_emitted_on_japanese_period():
     s = StreamingSession(now=lambda: 0.0)
     ev = s.add_chunk_text("会議を始めます。")
