@@ -4,7 +4,13 @@ import json
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from config import WHISPER_CLI, WHISPER_FINAL_MODEL, WHISPER_VAD_MODEL
+from config import (
+    WHISPER_CLI,
+    WHISPER_FINAL_BEAM_SIZE,
+    WHISPER_FINAL_MODEL,
+    WHISPER_THREADS,
+    WHISPER_VAD_MODEL,
+)
 from services.noise_reduction import reduce_noise
 from services.prompt_safety import safe_prompt_for_model
 
@@ -59,6 +65,10 @@ def transcribe_audio(
             "--output-json",
             "-of", out_base,
             "--no-prints",
+            # whisper-cli の既定は min(4, hardware_concurrency) で頭打ち。物理コア数で明示。
+            "--threads", str(WHISPER_THREADS),
+            # 最終転写は精度優先で beam search を有効化（whisper 既定の 5）。
+            "--beam-size", str(WHISPER_FINAL_BEAM_SIZE),
             # 無音区間での幻覚（「ご視聴ありがとうございました」等）を抑制
             "--no-speech-thold", "0.6",
             "--entropy-thold", "2.4",
@@ -69,11 +79,12 @@ def transcribe_audio(
         if safe_prompt:
             cmd += ["--prompt", safe_prompt]
 
-        # VAD は環境変数 WHISPER_VAD_ENABLED=1 で明示有効化した場合のみ使用。
-        # デフォルト無効: Silero-VAD のデフォルト閾値 (0.5) が日本語短発話を
-        # 過剰にカットするため、--no-speech-thold による抑制を優先する。
-        # 有効化する場合は保守的な閾値 (0.35) を使用して過剰カットを防ぐ。
-        if WHISPER_VAD_MODEL and os.environ.get("WHISPER_VAD_ENABLED") == "1":
+        # VAD はモデルが存在すればデフォルト ON。
+        # WHISPER_VAD_ENABLED=0 で明示的に無効化できる。
+        # 保守的な閾値 (0.35) + speech-pad 400ms により、日本語の短発話
+        # （「はい」「いえ」「そう」）を過剰カットしない設定にしている。
+        # 詳細は work/UIMock/2026-04-29-voice-recognition-improvements.md §3 P1-C
+        if WHISPER_VAD_MODEL and os.environ.get("WHISPER_VAD_ENABLED", "1") != "0":
             cmd += [
                 "--vad",
                 "--vad-model", WHISPER_VAD_MODEL,

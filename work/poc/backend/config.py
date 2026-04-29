@@ -19,6 +19,18 @@ WHISPER_SERVER_BIN = os.environ.get(
 )
 WHISPER_SERVER_PORT = int(os.environ.get("WHISPER_SERVER_PORT", "8300"))
 
+# whisper の推論スレッド数。
+# whisper-cli の既定は min(4, hardware_concurrency) で頭打ちになるため、
+# 物理コア数の多い PC で無指定だと CPU が遊ぶ。明示指定で RTF を改善する。
+# 物理/論理の区別は psutil なしでは取れないので os.cpu_count() (論理) を使う。
+# HT 競合を避けたい場合は WHISPER_THREADS で物理コア数を明示すること。
+WHISPER_THREADS = int(os.environ.get("WHISPER_THREADS", os.cpu_count() or 4))
+
+# beam_size: realtime は速度優先で 1 (greedy)、final は精度優先で 5 (whisper 既定)。
+# whisper-server は /inference の form で per-request 上書きを受け付ける。
+WHISPER_REALTIME_BEAM_SIZE = int(os.environ.get("WHISPER_REALTIME_BEAM_SIZE", "1"))
+WHISPER_FINAL_BEAM_SIZE = int(os.environ.get("WHISPER_FINAL_BEAM_SIZE", "5"))
+
 # Kotoba-Whisper v2.2: 日本語特化蒸留モデル (GGML 形式)
 # ダウンロード元: Pomni/kotoba-whisper-v2.2-ggml-allquants (公開・認証不要)
 #   curl -L -o models/ggml-kotoba-v2.2-q5_k.bin \

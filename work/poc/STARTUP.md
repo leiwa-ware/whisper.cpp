@@ -140,7 +140,10 @@ Ollama は必要に応じて停止する（次回も使う場合はそのまま�
 | `WHISPER_MODEL` | `models/ggml-base.bin` | リアルタイム転写モデル（速度優先） |
 | `WHISPER_SERVER_PORT` | `8178` | whisper-server のポート番号 |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama のエンドポイント |
-| `WHISPER_VAD_ENABLED` | 未設定（無効） | `1` にすると VAD 有効化（要 silero モデル） |
+| `WHISPER_VAD_ENABLED` | `1`（有効） | `0` にすると VAD 無効化。silero モデル未存在なら自動的に無効。 |
+| `WHISPER_THREADS` | `os.cpu_count()`（論理コア数） | whisper-cli/server の `-t`。HT 競合を避けたい場合は物理コア数を指定 |
+| `WHISPER_REALTIME_BEAM_SIZE` | `1` | リアルタイム転写の beam（1＝greedy・最速） |
+| `WHISPER_FINAL_BEAM_SIZE` | `5` | 最終転写の beam（whisper 既定値・精度優先） |
 
 設定例：
 

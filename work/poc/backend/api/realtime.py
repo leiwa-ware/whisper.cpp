@@ -18,9 +18,10 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 
-from config import WHISPER_MODEL, WHISPER_SERVER_PORT
+from config import WHISPER_MODEL, WHISPER_REALTIME_BEAM_SIZE, WHISPER_SERVER_PORT
 from services.prompt_safety import safe_prompt_for_model
 from services.streaming_session import StreamingSession
+from services.text_dedup import strip_overlap_prefix
 from services.transcription import _to_16k_wav
 
 router = APIRouter()
@@ -47,7 +48,14 @@ async def _transcribe_chunk_bytes(
             raise HTTPException(status_code=422, detail=f"Audio conversion failed: {e}")
 
         url = f"http://127.0.0.1:{WHISPER_SERVER_PORT}/inference"
-        form: dict = {"language": "ja", "response_format": "json"}
+        # realtime チャンクは速度優先で beam_size=1 (greedy)。
+        # whisper-server 起動時の -bs と同値だが、明示しておくことで運用上
+        # 「サーバーを変えても per-chunk の挙動を変えない」保証になる。
+        form: dict = {
+            "language": "ja",
+            "response_format": "json",
+            "beam_size": str(WHISPER_REALTIME_BEAM_SIZE),
+        }
         # whisper-server は WHISPER_MODEL でロード済み。kotoba 系なら 24文字以下に短縮。
         safe_prompt = safe_prompt_for_model(initial_prompt, WHISPER_MODEL)
         if safe_prompt:
@@ -74,10 +82,17 @@ async def _transcribe_chunk_bytes(
 async def transcribe_chunk(
     audio: UploadFile = File(...),
     initial_prompt: str = "",
+    previous_text: str = "",
 ):
     """Legacy stateless chunk endpoint. Kept for backward compatibility with
     meeting.html's existing chunked POST flow. New clients should use the
-    /ws/transcribe WebSocket for partial/final events."""
+    /ws/transcribe WebSocket for partial/final events.
+
+    `previous_text` is the response text from the prior chunk. When the
+    client sends overlapping audio (sliding window), the server strips the
+    matching prefix from this chunk's whisper output to avoid duplicate
+    display. See work/UIMock/2026-04-29-voice-recognition-improvements.md §3 P2-B
+    """
     try:
         text, available = await _transcribe_chunk_bytes(
             await audio.read(),
@@ -88,6 +103,8 @@ async def transcribe_chunk(
         raise
     if not available:
         return {"text": "", "available": False}
+    if previous_text:
+        text = strip_overlap_prefix(previous_text, text)
     return {"text": text, "available": True}
 
 

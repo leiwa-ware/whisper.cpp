@@ -13,7 +13,16 @@ from api.recording import router as recording_router
 from api.minutes import router as minutes_router
 from api.webhooks import router as webhooks_router
 from api.realtime import router as realtime_router
-from config import WHISPER_SERVER_BIN, WHISPER_SERVER_PORT, WHISPER_MODEL, WHISPER_FINAL_MODEL, OLLAMA_HOST, LOCAL_LLM_MODEL
+from config import (
+    LOCAL_LLM_MODEL,
+    OLLAMA_HOST,
+    WHISPER_FINAL_MODEL,
+    WHISPER_MODEL,
+    WHISPER_REALTIME_BEAM_SIZE,
+    WHISPER_SERVER_BIN,
+    WHISPER_SERVER_PORT,
+    WHISPER_THREADS,
+)
 
 _UI_DIR = Path(__file__).parent.parent.parent / "UIMock"
 _log = logging.getLogger("uvicorn.error")  # uvicorn のロガーに乗せることで出力される
@@ -43,10 +52,14 @@ async def _ensure_whisper_server() -> Optional[subprocess.Popen]:
         return None
 
     # asyncio.create_subprocess_exec は Windows の --reload モードで
-    # NotImplementedError になるため subprocess.Popen を使用する
+    # NotImplementedError になるため subprocess.Popen を使用する。
+    # -t / -bs は realtime 経路のデフォルト値。/inference の form で
+    # per-request 上書きも可能（services/api/realtime.py 参照）。
     proc = subprocess.Popen(
         [str(bin_path), "-m", WHISPER_MODEL, "-l", "ja",
-         "--host", "127.0.0.1", "--port", str(WHISPER_SERVER_PORT)],
+         "--host", "127.0.0.1", "--port", str(WHISPER_SERVER_PORT),
+         "-t", str(WHISPER_THREADS),
+         "-bs", str(WHISPER_REALTIME_BEAM_SIZE)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
