@@ -63,9 +63,11 @@ def transcribe_audio(
             "--no-speech-thold", "0.6",
             "--entropy-thold", "2.4",
         ]
-        # 固有名詞のみを自然文として渡す（コンマ区切りの単語リストは精度を低下させる）
-        if initial_prompt:
-            cmd += ["--prompt", initial_prompt]
+        # kotoba モデルは 30文字以上のプロンプトで出力崩壊するため、必要に応じて自動で短縮。
+        # 詳細は work/UIMock/2026-04-29-bench-results.md §2 / services/prompt_safety.py
+        safe_prompt = safe_prompt_for_model(initial_prompt, WHISPER_FINAL_MODEL)
+        if safe_prompt:
+            cmd += ["--prompt", safe_prompt]
 
         # VAD は環境変数 WHISPER_VAD_ENABLED=1 で明示有効化した場合のみ使用。
         # デフォルト無効: Silero-VAD のデフォルト閾値 (0.5) が日本語短発話を
