@@ -57,11 +57,18 @@
 
 ### 3.2 新たに判明した問題と対応
 
-**問題A: kotoba + 長プロンプトで出力崩壊**
+**問題A: kotoba + 長プロンプトで出力崩壊** ✅ **対応済み（2026-04-29）**
 
 - 影響: `services/transcription.py` で final transcription（kotoba）に長い `initial_prompt` を渡すと、転写が崩壊する可能性
-- 暫定対応: kotoba 用プロンプトを **15文字以下**に制限する
-- 恒久対応: whisper.cpp 側のバグ調査 or kotoba モデルの再変換検証
+- 詳細閾値: 30文字以上で破綻、27文字までは正常（5文字刻みで実測確認）
+- **対応**: [services/prompt_safety.py](../poc/backend/services/prompt_safety.py) を新規追加
+  - `safe_prompt_for_model(prompt, model_path)` が kotoba 検出時に **24文字** を上限に切断
+  - 句読点（。、！？空白）境界で自然に切断、なければ hard cut
+  - [transcription.py](../poc/backend/services/transcription.py) と [realtime.py](../poc/backend/api/realtime.py) の2経路に適用
+  - kotoba 以外（small/medium/base 等）はパススルーで無影響
+- E2E 検証: 51文字プロンプト → 22文字に短縮 → kotoba が正常な28文字を返した（崩壊なし）
+- 単体テスト: [tests/test_prompt_safety.py](../poc/backend/tests/test_prompt_safety.py) 24ケース
+- 恒久対応（要 follow-up）: whisper.cpp 側のバグ調査 or kotoba モデルの再変換検証
 
 **問題B: 同音異義語（成約率↔制約率）はプロンプトで修正不可**
 
