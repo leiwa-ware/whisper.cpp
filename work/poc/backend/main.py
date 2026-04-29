@@ -114,10 +114,11 @@ async def health():
         "status": "ok",
         "whisper_server": whisper_ok,
         "whisper_server_port": WHISPER_SERVER_PORT,
+        "whisper_realtime_model": WHISPER_MODEL,
         "whisper_final_model": WHISPER_FINAL_MODEL,
         "ollama": ollama_ok,
         "llm_model": LOCAL_LLM_MODEL,
-        "note": "whisper-server uses base model for realtime. Final transcription uses WHISPER_FINAL_MODEL.",
+        "note": "whisper-server uses realtime model for chunks. Final transcription uses WHISPER_FINAL_MODEL.",
     }
 
 
