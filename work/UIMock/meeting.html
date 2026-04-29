@@ -422,7 +422,21 @@ let chunkInterval = null;  // 定期送信タイマー
 let realtimeAvailable = true; // whisper-server が利用可能かどうか
 let isChunkProcessing = false; // 並行リクエスト防止フラグ（POST フォールバック用）
 let realtimeContextBuffer = ''; // 直近チャンクの認識テキスト（POST フォールバック時の initial_prompt 用）
+let lastChunkResponseText = ''; // POST フォールバック直前レスポンス（サーバー overlap dedup ヒント用）
 const REALTIME_MAX_CONTEXT_CHARS = 200; // whisper --prompt の実効上限に合わせた最大文字数
+
+// ─── Sliding window 設定（P2-A）─────────────────────────────
+// advice.md「3〜5秒チャンク + 0.5〜1秒overlap」/ revised-plan.md「4秒+0.8秒」に準拠。
+// timeslice=250ms の細かいチャンクを溜め、4秒分（=16 chunks）を 0.75秒（=3 chunks）
+// オーバーラップさせながら送る。語尾欠落を防ぎつつ体感遅延を 5s→3.25s に短縮。
+// サーバー側 dedup は services/text_dedup.py + StreamingSession で実施（P2-B）。
+const CHUNK_TIMESLICE_MS    = 250;
+const WINDOW_CHUNKS         = 16;                              // 4 秒
+const OVERLAP_CHUNKS        = 3;                               // 0.75 秒
+const STEP_CHUNKS           = WINDOW_CHUNKS - OVERLAP_CHUNKS;  // 13 chunks = 3.25 秒シフト
+const REALTIME_POLL_MS      = 1000;                            // 送信判定の間隔
+const MAX_PENDING_CHUNKS    = WINDOW_CHUNKS * 2;               // 滞留時の上限（pile-up リカバリ）
+const PREVIOUS_TEXT_TAIL_CHARS = 30;                           // POST 経路の dedup ヒント長
 
 // WebSocket 主経路（partial/final 二段出力）。失敗時は従来 POST にフォールバック。
 let ws = null;
@@ -551,6 +565,7 @@ async function startRec() {
   realtimeAvailable = true;
   isChunkProcessing = false;
   realtimeContextBuffer = ''; // POST フォールバック用バッファをリセット
+  lastChunkResponseText = ''; // POST フォールバック dedup ヒントをリセット
   useWebSocket = (typeof WebSocket !== 'undefined');
   wsReady = false;
   wsClosing = false;
@@ -588,11 +603,12 @@ async function startRec() {
     }
     console.log('[POC] chunk received, size =', e.data.size, 'total audioChunks =', audioChunks.length);
   };
-  mediaRecorder.start(1000);
-  console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType);
+  mediaRecorder.start(CHUNK_TIMESLICE_MS);
+  console.log('[POC] MediaRecorder started, mimeType =', mediaRecorder.mimeType,
+    '| timeslice =', CHUNK_TIMESLICE_MS, 'ms | window =', WINDOW_CHUNKS, 'chunks (4s) | overlap =', OVERLAP_CHUNKS, 'chunks (0.75s)');
 
-  // 5 秒ごとにリアルタイム文字起こし送信
-  chunkInterval = setInterval(sendRealtimeChunk, 5000);
+  // POLL_MS 毎に「ウィンドウ分溜まったか」をチェックし、溜まっていれば送信
+  chunkInterval = setInterval(sendRealtimeChunk, REALTIME_POLL_MS);
 }
 
 async function sendRealtimeChunk() {
@@ -601,23 +617,29 @@ async function sendRealtimeChunk() {
     console.warn('[POC] sendRealtimeChunk SKIP: initChunk not yet captured (recording started <1s ago?)');
     return;
   }
-  if (pendingChunks.length === 0) {
-    console.log('[POC] sendRealtimeChunk SKIP: pendingChunks empty (no new audio since last send)');
+
+  // 滞留が極端なら古いチャンクを切る（WS/サーバ詰まり時のリカバリ）。
+  // sliding window では正常時 pendingChunks <= WINDOW_CHUNKS+α で安定する。
+  if (pendingChunks.length > MAX_PENDING_CHUNKS) {
+    const drop = pendingChunks.length - MAX_PENDING_CHUNKS;
+    pendingChunks.splice(0, drop);
+    console.warn('[POC] dropped', drop, 'old chunks (pile-up recovery; live transcript falls behind)');
+  }
+
+  // ─── ウィンドウ分溜まるまで送信しない ───
+  if (pendingChunks.length < WINDOW_CHUNKS) {
     return;
   }
 
-  // ─── batch 構築（WS / POST 共通）───
-  const all = pendingChunks.splice(0);
-  const MAX_REALTIME_CHUNKS = 10;
-  const batch = all.length > MAX_REALTIME_CHUNKS ? all.slice(-MAX_REALTIME_CHUNKS) : all;
-  if (all.length > MAX_REALTIME_CHUNKS) {
-    console.warn('[POC] chunk cap: kept last', MAX_REALTIME_CHUNKS, 'of', all.length,
-      '— oldest', all.length - MAX_REALTIME_CHUNKS, 'discarded (covered by final transcription)');
-  }
+  // ─── sliding window 切出し：WINDOW を読み、STEP だけ消費（OVERLAP は次回に持ち越し）───
+  const batch = pendingChunks.slice(0, WINDOW_CHUNKS);
+  pendingChunks.splice(0, STEP_CHUNKS);
+
   const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
   const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
   const blob = new Blob([initChunk, ...batch], { type: mime || 'audio/webm' });
-  console.log('[POC] realtime chunk send: size =', blob.size, 'bytes, batched chunks =', batch.length);
+  console.log('[POC] realtime chunk send: size =', blob.size, 'bytes, window =', batch.length,
+    'chunks, overlap with next =', OVERLAP_CHUNKS, 'chunks, pending after splice =', pendingChunks.length);
 
   // ─── 主経路: WebSocket（partial/final 二段出力）───
   if (useWebSocket && wsReady && ws && ws.readyState === WebSocket.OPEN) {
@@ -652,6 +674,11 @@ async function sendRealtimeChunk() {
       realtimeContextBuffer,
     ].filter(Boolean).join('、').slice(-REALTIME_MAX_CONTEXT_CHARS);
     if (prompt) form.append('initial_prompt', prompt);
+    // P2-B: sliding window で重なった範囲をサーバ側で除去するためのヒント。
+    // 直前レスポンス末尾 N 文字と、新レスポンス先頭が一致したら strip される。
+    if (lastChunkResponseText) {
+      form.append('previous_text', lastChunkResponseText.slice(-PREVIOUS_TEXT_TAIL_CHARS));
+    }
 
     const res = await fetch(`${API_BASE}/transcribe-chunk`, { method: 'POST', body: form });
     const elapsed_ms = Date.now() - t0;
@@ -667,6 +694,8 @@ async function sendRealtimeChunk() {
       return;
     }
     if (data.text) {
+      // data.text はサーバ側で dedup 済。次回の dedup ヒントとして保持。
+      lastChunkResponseText = data.text;
       realtimeContextBuffer = (realtimeContextBuffer + data.text).slice(-REALTIME_MAX_CONTEXT_CHARS);
       appendToLiveBox(data.text);
     }

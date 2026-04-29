@@ -235,3 +235,36 @@ def test_chunk_texts_joined_with_single_space():
     assert ev["type"] == "final"
     # Single space joiner; no double-space artifacts
     assert "  " not in ev["text"]
+
+
+# --- P2-B: sliding-window overlap dedup ----------------------------------
+
+
+def test_overlap_prefix_stripped_from_new_chunk():
+    """P2-B: sliding window で重複した先頭は除去され、重複しない部分だけが追加される。"""
+    s = StreamingSession(now=lambda: 0.0)
+    s.add_chunk_text("今日のテーマは")
+    ev = s.add_chunk_text("今日のテーマは売上の確認で")  # 7 chars overlap
+    assert ev["type"] == "partial"
+    assert ev["delta"] == "売上の確認で"
+    assert ev["text"] == "今日のテーマは 売上の確認で"
+
+
+def test_full_duplicate_chunk_emits_empty_delta_no_partial_update():
+    """完全重複チャンクは text を変えず、delta=空で partial を返す。"""
+    s = StreamingSession(now=lambda: 0.0)
+    s.add_chunk_text("次の議題に移ります")
+    ev = s.add_chunk_text("次の議題に移ります")  # 完全重複
+    assert ev["type"] == "partial"
+    assert ev["delta"] == ""
+    assert ev["text"] == "次の議題に移ります"
+
+
+def test_overlap_against_confirmed_text_after_finalize():
+    """直前 finalize 済の confirmed_text 末尾とも overlap 検出する。"""
+    s = StreamingSession(now=lambda: 0.0)
+    s.add_chunk_text("会議を始めます。")     # → final, partial_text = ""
+    ev = s.add_chunk_text("始めます。次は売上")  # 「始めます。」が overlap
+    assert ev["type"] == "partial"
+    # 「始めます。」が strip され「次は売上」のみが新規 delta
+    assert ev["delta"] == "次は売上"

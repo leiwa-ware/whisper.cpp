@@ -15,6 +15,8 @@ from __future__ import annotations
 import time
 from typing import Callable, Optional
 
+from services.text_dedup import strip_overlap_prefix
+
 # 句読点による文末（日本語＋英語混在を想定）
 _SENTENCE_END_PUNCT = "。？！.?!"
 
@@ -99,6 +101,13 @@ class StreamingSession:
         current partial state without modification).
         """
         delta = text.strip()
+        if delta:
+            # P2-B: sliding window で送られた overlap audio が同じ語句を二重に
+            # 出力するのを抑制。直近の confirmed+partial 末尾に一致する prefix を
+            # 除去する。完全に重複していたら以降の処理はスキップ（delta=空）。
+            prior_combined = (self.confirmed_text + " " + self.partial_text).rstrip()
+            delta = strip_overlap_prefix(prior_combined, delta)
+
         if delta:
             now = self._now()
             if self._partial_started_at is None:

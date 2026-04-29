@@ -226,3 +226,60 @@ def test_websocket_whisper_unavailable_emits_error(client, monkeypatch):
         ev = _recv_event(ws)
         assert ev["type"] == "error"
         assert "unavailable" in ev["message"]
+
+
+# --- P2-B + P3-A: sliding window / overlap dedup over WebSocket -----------
+
+
+def test_websocket_dedups_overlap_text_from_sliding_window(client):
+    """sliding window で送られた audio overlap が同じ語句を二重出力しないこと。
+
+    フロント (meeting.html) は WINDOW=4s / OVERLAP=0.75s で audio を送る。
+    chunk N と chunk N+1 で重複した先頭部分を whisper が再認識しても、
+    サーバ側 StreamingSession の strip_overlap_prefix で除去され、UI には
+    delta=新規部分だけが届く。
+    """
+    # chunk 1: "本日の議題は売上の" (partial — sentence-end なし)
+    # chunk 2: 同じ先頭 + 新しい末尾 (overlap simulation)
+    client._script.extend([
+        "本日の議題は売上の",
+        "本日の議題は売上の確認です。",
+    ])
+    with client.websocket_connect("/api/ws/transcribe") as ws:
+        assert _recv_event(ws)["type"] == "ready"
+
+        ws.send_bytes(b"<c1>")
+        e1 = _recv_event(ws)
+        assert e1["type"] == "partial"
+        assert e1["delta"] == "本日の議題は売上の"
+
+        ws.send_bytes(b"<c2>")
+        e2 = _recv_event(ws)
+        # 「。」で finalize、delta は overlap を除いた新規部分のみ
+        assert e2["type"] == "final"
+        assert e2["delta"] == "確認です。"
+        # 累積テキストは重複なく一回だけ「本日の議題は売上の」を含む
+        assert e2["text"].count("本日の議題は売上の") == 1
+        assert "確認です。" in e2["text"]
+
+
+def test_websocket_full_duplicate_chunk_emits_partial_with_empty_delta(client):
+    """完全重複（同じ語句が再認識されたケース）は partial(delta="") を返し UI を変更しない。"""
+    client._script.extend([
+        "次の議題に移ります",
+        "次の議題に移ります",  # 完全重複
+    ])
+    with client.websocket_connect("/api/ws/transcribe") as ws:
+        assert _recv_event(ws)["type"] == "ready"
+
+        ws.send_bytes(b"<c1>")
+        e1 = _recv_event(ws)
+        assert e1["type"] == "partial"
+        assert e1["delta"] == "次の議題に移ります"
+
+        ws.send_bytes(b"<c2>")
+        e2 = _recv_event(ws)
+        # 完全重複なので delta は空、text は変わらず
+        assert e2["type"] == "partial"
+        assert e2["delta"] == ""
+        assert e2["text"] == "次の議題に移ります"
