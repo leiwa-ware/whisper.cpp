@@ -11,13 +11,16 @@
             "id": "3a21e9a3ca3a3d57",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "Untitled.md",
-                "mode": "source",
-                "source": false
+                "file": "Untitled.canvas",
+                "viewState": {
+                  "x": 0,
+                  "y": 0,
+                  "zoom": 0
+                }
               },
-              "icon": "lucide-file",
+              "icon": "lucide-layout-dashboard",
               "title": "Untitled"
             }
           }
@@ -41,7 +44,7 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": true
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -185,9 +188,10 @@
   },
   "active": "3a21e9a3ca3a3d57",
   "lastOpenFiles": [
-    "2511.08093v1.pdf",
-    "Untitled.md",
+    "Untitled.canvas",
     "2207.03852v1.pdf",
+    "Untitled.md",
+    "2511.08093v1.pdf",
     "2406.03155v1.pdf",
     "2406.15668v2.pdf",
     "2305.10788v2.pdf",
@@ -196,7 +200,6 @@
     "2507.10860v1.pdf",
     "2409.16399v1.pdf",
     "Untitled.base",
-    "Untitled.canvas",
     "ようこそ.md"
   ]
 }
