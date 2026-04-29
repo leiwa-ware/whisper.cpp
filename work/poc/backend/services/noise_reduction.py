@@ -49,11 +49,13 @@ def reduce_noise(wav_path: str, output_path: str) -> str:
         if proc.returncode == 0:
             _log.debug("Noise reduction (%s) applied: %s → %s", af_filter, wav_path, output_path)
             return output_path
-        stderr_snippet = proc.stderr.decode("utf-8", errors="replace")[-300:]
-        _log.warning(
-            "Filter '%s' failed (code %s): %s",
-            af_filter, proc.returncode, stderr_snippet,
-        )
+        if af_filter not in _reported_unsupported:
+            stderr_snippet = proc.stderr.decode("utf-8", errors="replace")[-300:]
+            _log.warning(
+                "Filter '%s' failed (code %s) — will use fallback on future calls too: %s",
+                af_filter, proc.returncode, stderr_snippet,
+            )
+            _reported_unsupported.add(af_filter)
 
     _log.warning(
         "All noise reduction filters failed for level='%s', using original audio",
