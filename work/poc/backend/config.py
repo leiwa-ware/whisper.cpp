@@ -37,7 +37,7 @@ _medium = REPO_ROOT / "models/ggml-medium.bin"
 # GPU (CUDA/Metal) 環境なら: WHISPER_MODEL=.../ggml-kotoba-v2.2-q8_0.bin を明示指定
 WHISPER_MODEL = os.environ.get(
     "WHISPER_MODEL",
-    str(REPO_ROOT / "models/ggml-base.bin"),
+    str(REPO_ROOT / "models/ggml-small.bin"),
 )
 
 # 最終転写用（精度優先）: Kotoba q5_k → q8_0 → medium → base の順でフォールバック
