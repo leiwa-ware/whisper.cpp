@@ -61,7 +61,8 @@
       "Bash(awk '{printf \"%-10s  %s\\\\n\", $5, $9}')",
       "Bash(wc -l c:\\\\\\\\work\\\\\\\\30.Projects\\\\\\\\102.AI_Projects\\\\\\\\whisper.cpp\\\\\\\\whisper.cpp\\\\\\\\work\\\\\\\\UIMock\\\\\\\\meeting.html)",
       "Bash(\"/c/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp/work/poc/backend/venv/Scripts/pip.exe\" list *)",
-      "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py -x --no-header)"
+      "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py -x --no-header)",
+      "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py -v --no-header)"
     ]
   }
 }
