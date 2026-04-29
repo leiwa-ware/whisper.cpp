@@ -514,7 +514,13 @@ async function sendRealtimeChunk() {
   }
   console.log('[POC] sendRealtimeChunk: state OK → sending', pendingChunks.length, 'pending chunks, realtimeAvailable =', realtimeAvailable);
 
-  const batch = pendingChunks.splice(0);  // 取り出してクリア
+  const all = pendingChunks.splice(0);  // 取り出してクリア
+  const MAX_REALTIME_CHUNKS = 10;       // 最大10チャンク(≈10秒)に制限
+  const batch = all.length > MAX_REALTIME_CHUNKS ? all.slice(-MAX_REALTIME_CHUNKS) : all;
+  if (all.length > MAX_REALTIME_CHUNKS) {
+    console.warn('[POC] chunk cap: kept last', MAX_REALTIME_CHUNKS, 'of', all.length,
+      '— oldest', all.length - MAX_REALTIME_CHUNKS, 'discarded (covered by final transcription)');
+  }
   const mime = mediaRecorder ? mediaRecorder.mimeType : audioMime;
   const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
   const blob = new Blob([initChunk, ...batch], { type: mime || 'audio/webm' });
