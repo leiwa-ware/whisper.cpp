@@ -449,6 +449,80 @@ function setType(t) {
   document.getElementById('inp-phase').value  = isVisit ? '定期巡回 — 月次' : '提案フェーズ';
 }
 
+// ─── WebSocket realtime transport ────────────────────────
+// サーバ側 StreamingSession が partial/final を判定し、ここではイベントを描画するだけ。
+// 接続失敗・on-error 発生時は useWebSocket=false にして POST フォールバックに切替。
+function _industryFromUI() {
+  const sel = document.getElementById('inp-industry');
+  return sel ? sel.value : 'sales';
+}
+
+function _baseInitialPrompt() {
+  // 業界別の自然文プロンプト（vocabulary.py と同等の概念）。
+  // 固有名詞（得意先名・担当者名）を末尾に付与。
+  const industry = _industryFromUI();
+  const client = document.getElementById('inp-client').value.trim();
+  const owner = document.getElementById('inp-owner').value.trim();
+  const tmpl = {
+    sales:     '商談会議。成約率や見積もり、フォローアップについて話します。',
+    retail:    '店舗訪問。棚割りや在庫、売上について話します。',
+    logistics: '倉庫業務。ピッキングや在庫、出荷について話します。',
+  }[industry] || '会議。';
+  const names = [client, owner].filter(Boolean).join('、');
+  return names ? `${tmpl} ${names}。` : tmpl;
+}
+
+function openTranscriptWebSocket() {
+  if (!useWebSocket || typeof WebSocket === 'undefined') {
+    console.warn('[POC] WebSocket disabled or unsupported, using POST fallback');
+    return;
+  }
+  try {
+    ws = new WebSocket(WS_BASE);
+  } catch (e) {
+    console.warn('[POC] WebSocket constructor failed, fallback to POST:', e.message);
+    ws = null; useWebSocket = false; return;
+  }
+  ws.binaryType = 'blob';
+  ws.onopen = () => {
+    console.log('[POC] WebSocket open →', WS_BASE);
+    ws.send(JSON.stringify({ type: 'config', initial_prompt: _baseInitialPrompt() }));
+  };
+  ws.onmessage = (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { console.warn('[POC] WS non-JSON:', ev.data); return; }
+    if (msg.type === 'ready') { wsReady = true; console.log('[POC] WS ready'); return; }
+    if (msg.type === 'partial') { setPartial(msg.text || ''); return; }
+    if (msg.type === 'final')   { if (msg.text) commitFinal(msg.text); return; }
+    if (msg.type === 'error')   { console.warn('[POC] WS error event:', msg.message); return; }
+    console.log('[POC] WS unknown message:', msg);
+  };
+  ws.onerror = (e) => {
+    console.warn('[POC] WS error → POST fallback', e);
+    useWebSocket = false; wsReady = false;
+  };
+  ws.onclose = (e) => {
+    console.log('[POC] WS closed code=', e.code, 'wasReady=', wsReady, 'wasClosing=', wsClosing);
+    if (!wsClosing && !wsReady) {
+      // 開けずに閉じた → サーバ未起動 or 接続不可。POST フォールバックへ。
+      useWebSocket = false;
+    }
+    wsReady = false; ws = null;
+  };
+}
+
+function closeTranscriptWebSocket() {
+  if (!ws) return;
+  wsClosing = true;
+  try {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'close' }));
+    }
+  } catch (e) { /* noop */ }
+  // サーバが force_finalize を送り返してから閉じる猶予として 500ms 待つ
+  setTimeout(() => { try { if (ws) ws.close(); } catch {} }, 500);
+}
+
 // ─── Recording ───────────────────────────────────────────
 async function startRec() {
   console.log('[POC] startRec() called');
