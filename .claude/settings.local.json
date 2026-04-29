@@ -83,7 +83,8 @@
       "Bash(./venv/Scripts/pytest.exe tests/test_prompt_safety.py -v --no-header)",
       "Bash(./venv/Scripts/pytest.exe tests/test_streaming_session.py tests/test_streaming_websocket.py tests/test_prompt_safety.py tests/test_health.py --no-header -q)",
       "Bash(./venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/e2e_kotoba_guard.py\")",
-      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_prod_threshold.py\")"
+      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_prod_threshold.py\")",
+      "Bash(./work/poc/backend/venv/Scripts/python.exe \"C:/Users/sunyu/AppData/Local/Temp/bench_prod_30_51.py\")"
     ]
   }
 }
