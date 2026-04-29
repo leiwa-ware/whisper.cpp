@@ -500,8 +500,8 @@ function openTranscriptWebSocket() {
     let msg;
     try { msg = JSON.parse(ev.data); } catch { console.warn('[POC] WS non-JSON:', ev.data); return; }
     if (msg.type === 'ready') { wsReady = true; console.log('[POC] WS ready'); return; }
-    if (msg.type === 'partial') { setPartial(msg.text || ''); return; }
-    if (msg.type === 'final')   { if (msg.text) commitFinal(msg.text); return; }
+    if (msg.type === 'partial') { appendPartial(msg.delta || ''); return; }
+    if (msg.type === 'final')   { commitFinal(msg.text || ''); return; }
     if (msg.type === 'error')   { console.warn('[POC] WS error event:', msg.message); return; }
     console.log('[POC] WS unknown message:', msg);
   };
