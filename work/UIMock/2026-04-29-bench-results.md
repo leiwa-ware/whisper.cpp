@@ -121,15 +121,15 @@
 ```bash
 # WAV を 16kHz に変換
 ffmpeg -y -i "C:/work/30.Projects/102.AI_Projects/NeoCRM-mate/python/src/output/part_0.wav" \
-  -ar 16000 -ac 1 -c:a pcm_s16le "C:/Users/sunyu/AppData/Local/Temp/part_0_16k.wav"
+  -ar 16000 -ac 1 -c:a pcm_s16le "C:/.../AppData/Local/Temp/part_0_16k.wav"
 
 # ベンチマークスクリプト実行
 cd C:/work/30.Projects/102.AI_Projects/whisper.cpp/whisper.cpp
-./work/poc/backend/venv/Scripts/python.exe "C:/Users/sunyu/AppData/Local/Temp/bench_models.py"
-./work/poc/backend/venv/Scripts/python.exe "C:/Users/sunyu/AppData/Local/Temp/bench_kotoba_small_prompt.py"
+./work/poc/backend/venv/Scripts/python.exe "C:/.../AppData/Local/Temp/bench_models.py"
+./work/poc/backend/venv/Scripts/python.exe "C:/.../AppData/Local/Temp/bench_kotoba_small_prompt.py"
 ```
 
-スクリプトは `C:\Users\sunyu\AppData\Local\Temp\` に保存済み。
+スクリプトは `C:\...\Temp\` に保存済み。
 
 ---
 
