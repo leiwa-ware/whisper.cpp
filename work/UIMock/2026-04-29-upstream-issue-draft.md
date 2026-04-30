@@ -146,7 +146,7 @@ broken edge) and prefers Japanese sentence-end punctuation when possible.
 - [work/UIMock/2026-04-29-bench-results.md](2026-04-29-bench-results.md) — 詳細ベンチ結果
 - [work/poc/backend/services/prompt_safety.py](../poc/backend/services/prompt_safety.py) — workaround 実装
 - [work/poc/backend/tests/test_prompt_safety.py](../poc/backend/tests/test_prompt_safety.py) — 24 ケースの単体テスト
-- 再現スクリプト: `C:\Users\sunyu\AppData\Local\Temp\bench_prod_threshold.py`、`bench_prod_30_51.py`
+- 再現スクリプト: `C:\Users\...Temp\bench_prod_threshold.py`、`bench_prod_30_51.py`
 
 ## 起票判断のチェックポイント
 
